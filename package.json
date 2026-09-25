@@ -6,12 +6,26 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib",
+    "typecheck": "tsc --noEmit",
+    "verify:auth": "node --env-file=.env.local scripts/verify-auth.mjs",
+    "verify:backend": "node --env-file=.env.local scripts/verify-backend.mjs",
+    "verify:logic": "node --env-file=.env.local scripts/verify-logic.mjs",
+    "verify:journey": "node --env-file=.env.local scripts/verify-journey.mjs",
+    "verify:capture": "node --env-file=.env.local scripts/verify-capture.mjs",
+    "verify:onboarding": "node --env-file=.env.local scripts/verify-onboarding.mjs",
+    "verify:onboarding-ui": "node --env-file=.env.local scripts/verify-onboarding-ui.mjs",
+    "verify:pwa": "node scripts/verify-pwa.mjs",
+    "verify:layout": "node scripts/verify-layout.mjs",
+    "reset:test-data": "node --env-file=.env.local scripts/reset-test-data.mjs"
   },
   "dependencies": {
+    "@insforge/sdk": "^1.5.2",
     "next": "16.3.6",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

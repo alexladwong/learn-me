@@ -1,26 +1,239 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   learn-me design system
+   ==========================================================================
+   Two coordinated surfaces, one product:
+
+   - "Paper" — the learning surface. Warm off-white, generous spacing, calm.
+     Used for lessons, review, sentence practice.
+   - "Instrument" — the analytics surface. Deep slate, precise type, dense but
+     calm. Used for progress, Language DNA, weekly reports.
+
+   All colour lives in semantic tokens below. Never hardcode a hex in a
+   component: that is what keeps both surfaces consistent and makes dark mode
+   a token swap rather than a second stylesheet.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ---- Learning surface ----
+     A cool graphite-tinted neutral rather than a warm cream. The warmth read as
+     stationery; a faint blue-grey reads as a workspace, which is what this is.
+     The tint is deliberately tiny (chroma 0.003–0.006, hue 265): enough to sit
+     with the teal accent, not enough to look blue. */
+  --surface: oklch(97.6% 0.003 265);
+  --surface-raised: oklch(99.4% 0.002 265);
+  --surface-sunken: oklch(94.8% 0.005 265);
+  --surface-hover: oklch(96% 0.005 265);
+
+  --text-primary: oklch(21% 0.012 265);
+  --text-secondary: oklch(44% 0.014 265);
+  --text-muted: oklch(56% 0.012 265);
+  --text-on-accent: oklch(99% 0 0);
+
+  --border: oklch(90% 0.006 265);
+  --border-strong: oklch(83% 0.008 265);
+
+  /* Brand: a deep, desaturated teal. Restrained rather than bright — it has to
+     carry primary actions across a whole product without shouting. */
+  --accent: oklch(48% 0.085 195);
+  --accent-hover: oklch(42% 0.085 195);
+  --accent-soft: oklch(94% 0.025 195);
+  --accent-subtle: oklch(96.5% 0.012 195);
+
+  /* Status — never the only signal; always paired with an icon or label. */
+  --success: oklch(48% 0.085 155);
+  --success-soft: oklch(94% 0.03 155);
+  --warning: oklch(58% 0.11 70);
+  --warning-soft: oklch(95% 0.035 70);
+  --danger: oklch(50% 0.15 27);
+  --danger-soft: oklch(95% 0.03 27);
+  /* Distinct from both the accent and success, so a "new" marker never reads as
+     either a primary action or a correct answer. */
+  --info: oklch(48% 0.10 275);
+  --info-soft: oklch(95% 0.025 275);
+
+  --ring: oklch(48% 0.085 195);
+
+  /* Moderate corner radius. Much above ~0.75rem starts to read as a toy. */
+  --radius-sm: 0.25rem;
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-card: 0 1px 2px oklch(21% 0.012 265 / 0.04);
+  --shadow-raised: 0 1px 3px oklch(21% 0.012 265 / 0.06),
+                   0 6px 16px -8px oklch(21% 0.012 265 / 0.10);
+
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Instrument surface. Applied to a subtree (the analytics area) so the
+   dashboard can stay on paper while Progress reads as instrumentation. */
+.instrument {
+  --surface: oklch(19% 0.010 265);
+  --surface-raised: oklch(23.5% 0.012 265);
+  --surface-sunken: oklch(16% 0.010 265);
+  --surface-hover: oklch(26% 0.014 265);
+
+  --text-primary: oklch(96% 0.004 265);
+  --text-secondary: oklch(79% 0.010 265);
+  --text-muted: oklch(66% 0.012 265);
+  --text-on-accent: oklch(99% 0 0);
+
+  --border: oklch(30% 0.014 265);
+  --border-strong: oklch(38% 0.016 265);
+
+  --accent: oklch(72% 0.095 195);
+  --accent-hover: oklch(78% 0.095 195);
+  --accent-soft: oklch(30% 0.035 195);
+  --accent-subtle: oklch(26% 0.020 195);
+
+  --success: oklch(74% 0.095 155);
+  --success-soft: oklch(29% 0.035 155);
+  --warning: oklch(79% 0.11 75);
+  --warning-soft: oklch(31% 0.040 75);
+  --danger: oklch(69% 0.14 27);
+  --danger-soft: oklch(31% 0.050 27);
+  --info: oklch(74% 0.10 275);
+  --info-soft: oklch(30% 0.040 275);
+
+  --ring: oklch(72% 0.095 195);
+
+  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.3);
+  --shadow-raised: 0 8px 24px -8px oklch(0% 0 0 / 0.5);
+
+  color-scheme: dark;
 }
 
+/* Dark mode swaps the paper tokens. The instrument subtree is already dark,
+   so it keeps its own values. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --surface: oklch(17.5% 0.010 265);
+    --surface-raised: oklch(22% 0.012 265);
+    --surface-sunken: oklch(14.5% 0.010 265);
+    --surface-hover: oklch(25% 0.014 265);
+
+    --text-primary: oklch(96% 0.004 265);
+    --text-secondary: oklch(78% 0.010 265);
+    --text-muted: oklch(65% 0.012 265);
+
+    --border: oklch(29% 0.014 265);
+    --border-strong: oklch(37% 0.016 265);
+
+    --accent: oklch(74% 0.095 195);
+    --accent-hover: oklch(80% 0.095 195);
+    --accent-soft: oklch(28% 0.035 195);
+    --accent-subtle: oklch(24% 0.020 195);
+
+    --success: oklch(74% 0.095 155);
+    --success-soft: oklch(27% 0.035 155);
+    --warning: oklch(79% 0.11 75);
+    --warning-soft: oklch(29% 0.040 75);
+    --danger: oklch(70% 0.14 27);
+    --danger-soft: oklch(29% 0.050 27);
+    --info: oklch(74% 0.10 275);
+    --info-soft: oklch(27% 0.040 275);
+
+    --ring: oklch(74% 0.095 195);
+
+    --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.35);
+    --shadow-raised: 0 8px 24px -8px oklch(0% 0 0 / 0.55);
+
+    color-scheme: dark;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Expose the tokens to Tailwind utilities. */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-on-accent: var(--text-on-accent);
+
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-subtle: var(--accent-subtle);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-ring: var(--ring);
+
+  --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--surface);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    /* Guards against a long target-language string pushing the layout wide on
+       a 320px screen. */
+    overflow-wrap: break-word;
+  }
+
+  /* One visible focus treatment for every interactive element. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Content that only makes sense with motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Text for the language being learned gets its own optical treatment: larger,
+     and never forced into a Latin-only font stack. */
+  .text-target {
+    font-size: 1.125em;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+  }
+
+  /* Right-to-left languages (Arabic). Applied from `languages.direction`. */
+  [dir="rtl"] .flip-x {
+    transform: scaleX(-1);
+  }
 }

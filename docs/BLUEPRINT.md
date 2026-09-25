@@ -477,6 +477,54 @@ all the UI" phases.
 business and reach. Resist shipping 5–7 before 3 is solid — a beautiful capture pipeline on top of
 a weak memory model is a toy.
 
+### Where the build actually stands
+
+The phase table above is a plan, not a status. Measured against the code and the verifiers:
+
+| # | State | What is left, and what it is waiting on |
+|---|---|---|
+| 0–1 | **Done** | Foundation, auth (email + Google), app shell, six-step onboarding. Verified by `verify:onboarding`. |
+| 2 | **Done** | 3 languages × A1+A2, 46 lessons, every step type playable, real progress persistence. |
+| 3 | **Done** | FSRS-5 scheduler, Again/Hard/Good/Easy review, error fingerprinting, confusion pairs, auto-drill. Verified by `verify:journey`. |
+| 4 | **Partly** | Scenarios, conversation store, report arithmetic and the Speak screen exist. **Missing:** streaming replies, STT, and "Practice My Mistakes". **Blocked on:** an AI provider — the InsForge org is on the free plan, so the Model Gateway refuses (`AI is only available on paid plans`). |
+| 5 | **Done** | Paste → deterministic extraction → candidates → keep → item + bank + card, in one transaction. Enrichment is off and reports why. Verified by `verify:capture`. |
+| 6 | **Blocked** | The Speak screen states honestly that recorded practice is not built. Phoneme scoring needs a speech-analysis provider; no amount of application code substitutes for one, and inventing a score would violate the data-honesty rules. |
+| 7 | **Done** | Language DNA withholds a score rather than zeroing it, weekly summary, progress area, adaptive plan copy. |
+| 8 | **Partly** | Entitlements, quota gates and the upgrade surface are built and enforced in the database. **Blocked on:** Stripe keys — `payments stripe status` reports `unconfigured` in both test and live. |
+| 9 | **Started** | Offline review queue and PWA shell are built: an answer given with no connection is held on the device and replayed with a per-review idempotency key, so a sync that runs twice cannot schedule a card twice. Installable, with a network-first shell that never caches learner data. **Not started:** browser extension, more languages. |
+
+Every "blocked" row is waiting on a credential or a paid plan, not on engineering. Phases 0–3 and
+5, 7 are complete and verified; the honest summary is that the product's own logic is done and the
+external integrations are what remain.
+
+**A second correction, to row 0–1.** It said onboarding was "done". It rendered, and
+`verify:onboarding` passed, because that verifier writes the answers straight to the database and
+never touches the wizard — the same blind spot as the review-row one. Driving the real form in a
+browser showed the plan could **never** be saved:
+
+  * `/onboarding` lived inside `app/(app)/`, whose layout redirects a learner with no language to
+    `/languages`. Onboarding is the one page that *creates* a language, so navigating to it looped
+    forever (`ERR_TOO_MANY_REDIRECTS`). It now lives in its own `(onboarding)` group.
+  * Each step is a Server Action plus `redirect()`, which makes Next refetch the segment and
+    **remount the wizard**. Every answer was therefore destroyed between steps: the motivation
+    chips read back empty on the next step, the level reset to A1 and the time budget to 10
+    minutes, and the final submit failed validation with "choose at least one reason". The answers
+    now live in `sessionStorage` (`lib/onboarding/answers.ts`), not in `useState`.
+  * The native-language step injected an English option in its own markup while `profiles.
+    native_language` is a foreign key to `languages`, which contained no `en` — so the value the
+    wizard defaulted to was rejected by the database.
+
+The lesson is now twice-learned: a verifier that writes rows itself proves the *database* contract,
+not that a learner can complete the flow. `scripts/verify-browser.mjs` exists to close that gap.
+
+**A correction to the design constraint above.** Constraint 11 claimed the review queue was already
+"submittable as a batch of events" and that offline replay was safe. It was not: `apply_review` had
+no idempotency key, so replaying one review wrote a second `review_events` row, advanced `reps`
+again and inflated the daily count — measured, not theorised. A per-review `client_key` now gates
+the insert (`20260923210000_review-idempotency.sql`), which is what makes the offline queue in
+`lib/offline/queue.ts` safe to retry. The lesson is recorded here because the same assumption
+("replaying is fine") is the one that would break any future batch path.
+
 ---
 
 ## 11. Risks and how we de-risk them

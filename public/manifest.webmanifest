@@ -1,0 +1,26 @@
+{
+  "name": "Learn Me — language learning",
+  "short_name": "Learn Me",
+  "description": "A spaced-repetition language-learning system: guided lessons, a real scheduler, and drills built from your own mistakes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf8f5",
+  "theme_color": "#faf8f5",
+  "categories": ["education"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

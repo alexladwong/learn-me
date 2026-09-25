@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Learn Me">
+  <rect width="512" height="512" rx="96" fill="#1c1917"/>
+  <!-- An open book, matching the `learn` glyph used in the product nav. -->
+  <g fill="none" stroke="#faf8f5" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M96 140a32 32 0 0 1 32-32h96a44 44 0 0 1 44 44v264a38 38 0 0 0-38-38H96Z"/>
+    <path d="M416 140a32 32 0 0 0-32-32h-96a44 44 0 0 0-44 44v264a38 38 0 0 1 38-38h128Z"/>
+  </g>
+</svg>

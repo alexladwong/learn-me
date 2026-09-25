@@ -1,0 +1,48 @@
+[auth]
+# App origins the backend may redirect back to after OAuth / email links.
+#
+# The OAuth callback path must be listed explicitly, not just the origin: the
+# sign-in action passes the full `http://localhost:3000/api/auth/callback` as its
+# `redirectTo`, and the backend compares against this list verbatim. With only the
+# bare origin configured, "Sign in with Google" failed with
+# "…/api/auth/callback is not in the allowed redirect URLs".
+#
+# Add the production origin **and** its `/api/auth/callback` before deploying.
+allowed_redirect_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/api/auth/callback",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3000/api/auth/callback",
+]
+# Email verification is off while SMTP is unconfigured: with it on, email
+# signups cannot complete because the verification code is never delivered.
+# Turn this back on (and configure [auth.smtp]) before production launch.
+require_email_verification = false
+verify_email_method = "code"
+reset_password_method = "code"
+disable_signup = false
+
+[auth.password]
+min_length = 8
+require_number = false
+require_lowercase = false
+require_uppercase = false
+require_special_char = false
+
+[auth.smtp]
+enabled = false
+host = ""
+port = 465
+username = ""
+sender_email = ""
+sender_name = ""
+min_interval_seconds = 60
+
+[storage]
+max_file_size_mb = 50
+
+[realtime]
+retention_days = 0
+
+[schedules]
+retention_days = 7

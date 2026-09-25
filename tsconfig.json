@@ -20,7 +20,15 @@
     ],
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    /**
+     * Tests import their subject with an explicit `.ts` extension because Node's
+     * built-in test runner loads TypeScript directly through type stripping, and
+     * that resolver requires the real file extension. Safe here because the
+     * project never emits: Next bundles the app, and `noEmit` is on.
+     */
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": false
   },
   "include": [
     "next-env.d.ts",

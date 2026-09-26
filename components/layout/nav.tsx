@@ -144,11 +144,11 @@ export function BottomNav({
                 href={hrefFor(current, item.segment)}
                 aria-current={active ? "page" : undefined}
                 className={cx(
-                  "press flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                  "press flex h-12 flex-col items-center justify-center gap-0.5 text-[10px] font-medium",
                   active ? "text-accent" : "text-muted hover:text-secondary",
                 )}
               >
-                <Icon name={item.icon as IconName} size={20} />
+                <Icon name={item.icon as IconName} size={19} />
                 {item.label}
               </Link>
             </li>

@@ -221,9 +221,17 @@ export default async function DashboardPage({
       >
         {/* The one piece of visual language on the page: a speech shape, tied to
             what the product is about rather than being abstract decoration. */}
+        {/*
+          Desktop only.
+
+          It is pinned to the panel's bottom edge, and on a phone the mode strip
+          now sits there — the two overlapped, with the waveform showing through
+          the pills. It is decorative and `aria-hidden`, so dropping it below `sm`
+          costs nothing and removes the collision.
+        */}
         <SpeechWave
           bars={34}
-          className="pointer-events-none absolute inset-x-6 bottom-6 h-10 text-accent sm:inset-x-10"
+          className="pointer-events-none absolute inset-x-10 bottom-6 hidden h-10 text-accent sm:block"
         />
 
         <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-12">
@@ -247,25 +255,58 @@ export default async function DashboardPage({
               {nextLesson ? nextLesson.title : "Your session is ready"}
             </h2>
 
-            {/* Three real measures, laid out as a line rather than three cards. */}
-            <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
-              <div>
-                <dt className="text-xs text-muted">Reviews due</dt>
-                <dd className="text-lg font-semibold tabular-nums text-primary">
+            {/*
+              One compact line on a phone, three labelled measures from `sm` up.
+
+              On a 390px screen the labelled version stacked into a three-row block
+              with a heading above every number, which is most of what made the hero
+              read as an admin summary. The numbers are the same either way; only
+              the labelling changes.
+            */}
+            <dl className="mt-5">
+              <div className="flex items-center gap-2 text-sm text-secondary sm:hidden">
+                <dt className="sr-only">Reviews due</dt>
+                <dd className="font-semibold tabular-nums text-primary">
                   {session.items.filter((item) => item.kind === "review").length}
                 </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">Planned</dt>
-                <dd className="text-lg font-semibold tabular-nums text-primary">
+                <span>reviews</span>
+                <span aria-hidden="true" className="text-muted">
+                  ·
+                </span>
+                <dt className="sr-only">Planned</dt>
+                <dd className="font-semibold tabular-nums text-primary">
                   {session.totalMinutes > 0 ? `${session.totalMinutes} min` : "—"}
                 </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">Lessons ready</dt>
-                <dd className="text-lg font-semibold tabular-nums text-primary">
+                <span>planned</span>
+                <span aria-hidden="true" className="text-muted">
+                  ·
+                </span>
+                <dt className="sr-only">Lessons ready</dt>
+                <dd className="font-semibold tabular-nums text-primary">
                   {session.lessonsAvailable > 0 ? session.lessonsAvailable : "—"}
                 </dd>
+                <span>lessons</span>
+              </div>
+
+              <div className="hidden gap-x-8 sm:flex sm:flex-wrap sm:gap-y-3">
+                <div>
+                  <dt className="text-xs text-muted">Reviews due</dt>
+                  <dd className="text-lg font-semibold tabular-nums text-primary">
+                    {session.items.filter((item) => item.kind === "review").length}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">Planned</dt>
+                  <dd className="text-lg font-semibold tabular-nums text-primary">
+                    {session.totalMinutes > 0 ? `${session.totalMinutes} min` : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">Lessons ready</dt>
+                  <dd className="text-lg font-semibold tabular-nums text-primary">
+                    {session.lessonsAvailable > 0 ? session.lessonsAvailable : "—"}
+                  </dd>
+                </div>
               </div>
             </dl>
 

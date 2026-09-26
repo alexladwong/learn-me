@@ -86,7 +86,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         />
 
         <div className="rail-footer mt-auto flex flex-col items-center gap-3 border-t border-line px-2 py-4">
-          <Link
+          <Link 
             href={`/${primary.language_code}/settings`}
             title={`${displayName} — account settings`}
             aria-label="Account settings"
@@ -103,8 +103,26 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             rather than jumping. */}
       <div className="flex min-w-0 flex-col transition-[padding] duration-200">
         {/* ---- Top utility bar --------------------------------------------- */}
-        <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
-          <div className="flex items-center gap-3 px-4 py-2.5 sm:px-6">
+        <header
+          /*
+           * `padding-top: env(safe-area-inset-top)` so the bar clears the status
+           * bar and the Dynamic Island. Without it the bar's contents sat under
+           * the island on a notched device, and because it is `sticky` the page
+           * below it started too high — which is what put the top of the Today
+           * panel behind the header.
+           *
+           * Zero on devices without an inset, so it costs nothing elsewhere.
+           */
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+          className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md"
+        >
+          <div /*
+            The bar is deliberately shorter on a phone and unchanged on desktop.
+            At `py-2.5` plus a 44px control it was 64px — a quarter of the usable
+            height on a 390px-wide screen spent before any content. The controls
+            below drop to 36px and the padding to 6px, giving ~48px.
+          */
+          className="flex items-center gap-3 px-4 py-1.5 sm:px-6 sm:py-2.5">
             {/* Mobile identity. The wordmark is the first thing to go at 320px:
                 the switcher beside it is a control, this is a label. */}
             <Link
@@ -122,15 +140,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <LanguageSwitcher languages={switcherLanguages} className="min-w-0" />
 
             <div className="ml-auto flex items-center gap-2">
-              <ThemeToggle />
-              <Link
-                href={`/${primary.language_code}/settings`}
-                aria-label="Settings"
-                title="Settings"
-                className="flex size-9 items-center justify-center rounded-[var(--radius)] text-muted transition-colors hover:bg-surface-hover hover:text-primary"
-              >
-                <Icon name="settings" size={17} />
-              </Link>
+              {/* Desktop only. Below `lg` the top bar keeps just the language
+                  switcher and the avatar — theme and settings moved into the
+                  account sheet, which is where a learner looks for them anyway. */}
+              <span className="hidden lg:flex">
+                <ThemeToggle />
+              </span>
+              
               {/*
                 The account menu, on every screen size.
 

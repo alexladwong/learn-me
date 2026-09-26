@@ -112,7 +112,9 @@ export function NavToggle() {
     >
       <Icon name={expanded ? "arrowLeft" : "arrowRight"} size={18} />
       {/* Hidden when collapsed: the rail is icon-width and a label would wrap. */}
-      {expanded ? <span>Collapse</span> : <span className="sr-only">Expand navigation</span>}
+      <span className={expanded ? "" : "sr-only"}>
+        {expanded ? "Collapse" : "Expand"}
+      </span>
     </button>
   );
 }

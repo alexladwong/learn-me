@@ -140,13 +140,46 @@ try {
    * element itself removes coordinate/hit-testing from the equation, so a failure
    * here means the form action is broken rather than the click landing elsewhere.
    */
+  // A mobile capture too: at 390px the panel should be a bottom sheet.
+  await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, sessionId);
+  await sleep(400);
+  const mobileShot = await send("Page.captureScreenshot", { format: "png" }, sessionId);
+  writeFileSync(path.join(SHOTS, "account-sheet-390.png"), Buffer.from(mobileShot.data, "base64"));
+  const sheetShape = await evaluate(`
+    const m = document.querySelector('[role=menu]');
+    if (!m) return null;
+    const r = m.getBoundingClientRect();
+    return { top: Math.round(r.top), bottom: Math.round(r.bottom), width: Math.round(r.width), vw: window.innerWidth, vh: window.innerHeight };
+  `);
+  check(
+    "on a phone the account panel is a full-width bottom sheet",
+    Boolean(sheetShape) && sheetShape.width >= sheetShape.vw - 2 && sheetShape.bottom >= sheetShape.vh - 2,
+    sheetShape ? `w=${sheetShape.width}/${sheetShape.vw} bottom=${sheetShape.bottom}/${sheetShape.vh}` : "no panel",
+  );
+  await send("Emulation.clearDeviceMetricsOverride", {}, sessionId);
+  await sleep(300);
+
   const found = await evaluate(`
-    const btn = document.querySelector('[role=menuitem][type="submit"]');
+    const items = [...document.querySelectorAll('[role=menuitem]')];
+    const btn = items[items.length - 1];
     if (!btn) return "no button";
     btn.click();
-    return "clicked";
+    /*
+     * Read the disabled property in the SAME task as the click. React flushes
+     * events synchronously, so a self-disabling submitter is visible here — and
+     * that is precisely the state WebKit refuses to submit from. An earlier
+     * version disabled the button from its own onClick, which worked in Chrome
+     * and hung on iOS.
+     */
+    return btn.disabled ? "disabled-after-click" : "clicked";
   `);
-  check("the Sign out control was found and clicked", found === "clicked", found);
+  check(
+    "the Sign out control stays enabled through its own click",
+    found === "clicked",
+    found === "disabled-after-click"
+      ? "it disables itself, which cancels the submission on WebKit"
+      : found,
+  );
   await sleep(5000);
 
   const after = await cookies();

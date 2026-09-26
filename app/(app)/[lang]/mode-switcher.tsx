@@ -32,7 +32,14 @@ export function ModeSwitcher({
     <div
       role="group"
       aria-label="Learning mode"
-      className="flex flex-wrap gap-1.5"
+      /*
+       * A horizontally scrollable strip, not a wrapping block.
+       *
+       * Six pills wrap onto three rows inside the Today panel on a phone, which
+       * is most of why that panel read as a dense desktop card. One scrolling row
+       * keeps the hero about today's action instead of about mode selection.
+       */
+      className="scroll-fade-x -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5"
     >
       {LEARNING_MODES.map((mode) => {
         const meta = LEARNING_MODE_META[mode];
@@ -51,7 +58,7 @@ export function ModeSwitcher({
               )
             }
             className={cx(
-              "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors",
+              "press inline-flex min-h-[44px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-sm font-medium",
               isActive
                 ? "border-accent bg-accent-subtle text-accent"
                 : "border-line-strong bg-surface-raised text-secondary hover:bg-surface-hover",

@@ -35,7 +35,8 @@
     "cap:android:dev": "CAPACITOR_SERVER_URL=http://10.0.2.2:3000 npx cap sync android",
     "cap:ios:prod": "CAPACITOR_SERVER_URL=https://learn-me-01.vercel.app npx cap sync ios",
     "cap:android:prod": "CAPACITOR_SERVER_URL=https://learn-me-01.vercel.app npx cap sync android",
-    "cap:ios:lan": "CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL:?set CAPACITOR_SERVER_URL=http://<MAC-LAN-IP>:3000} npx cap sync ios"
+    "cap:ios:lan": "CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL:?set CAPACITOR_SERVER_URL=http://<MAC-LAN-IP>:3000} npx cap sync ios",
+    "verify:links": "node --env-file=.env.local scripts/verify-links.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

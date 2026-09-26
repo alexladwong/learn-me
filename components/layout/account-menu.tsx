@@ -3,31 +3,36 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui/icon";
-import { cx } from "@/lib/cx";
-import { signOutAction } from "@/app/(auth)/actions";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { useSignOut } from "@/lib/auth/sign-out-client";
 
 /**
  * The account menu.
  *
- * ## Why this exists
+ * ## Two presentations, one DOM tree
  *
- * Sign out previously lived **only** in the desktop rail's footer. Below `lg` that
- * rail is `hidden`, so on a phone — and in the Capacitor shell, which is always a
- * phone — there was no way to sign out at all. The learner's only route was to
- * guess that Settings → Account had one, several screens deep.
+ * On a phone this is a **bottom sheet**: full width, anchored to the bottom,
+ * sliding up, respecting the safe area, dismissable by tapping the backdrop. On
+ * desktop it stays a compact popover under the avatar. Which one you get is
+ * decided entirely by CSS breakpoints — no JavaScript media query, so there is
+ * no server/client disagreement and no hydration mismatch.
  *
- * The avatar was already sitting in the top bar on every screen doing nothing but
- * showing two letters. It is now the trigger, which gives every size the same
- * answer: tap your face, tap Sign out.
+ * ## Why it is rendered through a portal
  *
- * ## Behaviour
+ * The sheet is `position: fixed`, and the header it lives in has
+ * `backdrop-blur-md`. A `backdrop-filter` makes an element the **containing
+ * block for fixed descendants**, so a "fixed" sheet rendered inside the header
+ * would be positioned against the header rather than the viewport — it would
+ * appear under the avatar, clipped to a 56px strip. The portal escapes that.
  *
- * Deliberately mirrors the language switcher rather than inventing a second set
- * of patterns: open on click, close on outside pointerdown, Escape closes and
- * returns focus, arrow keys move between items, `role="menu"` with
- * `menuitem`/`separator` children. Two controls that behave differently for no
- * reason is worse than either behaviour on its own.
+ * ## What is in it
+ *
+ * The theme control lives here on mobile because the top bar no longer carries
+ * its own icon: the header keeps only the language switcher and the avatar, so
+ * the top of the app has room to breathe. Sign out sits last behind a separator,
+ * which is what makes it unmistakable without making it alarming.
  */
 export function AccountMenu({
   name,
@@ -41,30 +46,24 @@ export function AccountMenu({
   initials: string;
 }) {
   const pathname = usePathname();
-  /*
-   * Open state is derived from the path it was opened on, so a navigation closes
-   * the menu without an effect that would cause a second render pass.
-   */
   const [openedAtPath, setOpenedAtPath] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { signOut, pending, error } = useSignOut();
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const itemRefs = useRef<Array<HTMLElement | null>>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const focusOnOpenRef = useRef(-1);
-
-  const open = openedAtPath === pathname;
   const menuId = useId();
   const triggerId = useId();
+
+  const open = openedAtPath === pathname;
 
   const links = [
     { href: `/${lang}/progress`, label: "Profile", icon: "profile" as const },
     { href: `/${lang}/settings`, label: "Settings", icon: "settings" as const },
     { href: "/languages", label: "Languages", icon: "globe" as const },
   ];
-  // Three links, then a separator, then sign out.
-  const itemCount = links.length + 1;
 
   const close = useCallback((returnFocus: boolean) => {
     setOpenedAtPath(null);
@@ -80,6 +79,8 @@ export function AccountMenu({
     [pathname],
   );
 
+  // Outside click closes. On mobile the backdrop handles taps outside the sheet;
+  // this covers the desktop popover.
   useEffect(() => {
     if (!open) return;
     function onPointerDown(event: PointerEvent) {
@@ -95,21 +96,16 @@ export function AccountMenu({
     if (index >= 0) itemRefs.current[index]?.focus();
   }, [open]);
 
+  // Links plus Sign out. The appearance row holds its own tabbable control, so it
+  // is deliberately outside the roving focus order rather than fighting it.
+  const itemCount = links.length + 1;
+
   function onKeyDown(event: React.KeyboardEvent) {
-    if (!open) {
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        event.preventDefault();
-        openAt(0, true);
-      }
-      return;
-    }
+    if (!open) return;
+
     if (event.key === "Escape") {
       event.preventDefault();
       close(true);
-      return;
-    }
-    if (event.key === "Tab") {
-      close(false);
       return;
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -128,28 +124,95 @@ export function AccountMenu({
     }
   }
 
-  /**
-   * Clear everything this device holds about the learner before the session is
-   * revoked.
-   *
-   * The server action removes the cookies, which is what actually signs them
-   * out — this only clears *client* residue: a pending native OAuth request id
-   * (which would otherwise be left behind to be matched against a future deep
-   * link) and any cached responses. Without this, a stale request id can outlive
-   * the session that created it.
-   */
-  function clearClientState() {
-    try {
-      window.sessionStorage.removeItem("learnme:native-auth-request");
-    } catch {
-      // Storage disabled; nothing was stored.
-    }
-    if ("caches" in window) {
-      void caches.keys().then((keys) => {
-        for (const key of keys) void caches.delete(key);
-      });
-    }
-  }
+  const itemClass =
+    "press flex min-h-[48px] w-full items-center gap-3 px-4 text-left text-[0.9375rem] text-primary hover:bg-surface-hover lg:min-h-0 lg:px-3 lg:py-2.5 lg:text-sm";
+
+  const panel = (
+    <>
+      {/* Backdrop, mobile only. `lg:hidden` keeps the desktop popover unobscured. */}
+      <div
+        aria-hidden="true"
+        onClick={() => close(false)}
+        className="fixed inset-0 z-40 bg-[oklch(24%_0.028_225/0.35)] lg:hidden"
+      />
+
+      <div
+        id={menuId}
+        role="menu"
+        aria-labelledby={triggerId}
+        className={[
+          // Mobile: bottom sheet.
+          "sheet-up fixed inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden",
+          "rounded-t-[1.5rem] border-t border-line bg-surface-raised",
+          "pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+          // Desktop: compact popover, restoring the positional reset the sheet undoes.
+          "lg:absolute lg:inset-x-auto lg:bottom-auto lg:right-0 lg:top-[calc(100%+0.5rem)] lg:z-50 lg:w-64",
+          "lg:rounded-[var(--radius-xl)] lg:border lg:shadow-[var(--shadow-float)] lg:pb-1",
+        ].join(" ")}
+      >
+        {/* Grab handle — the visual cue that this panel came from the bottom. */}
+        <div aria-hidden="true" className="flex justify-center py-2.5 lg:hidden">
+          <span className="h-1 w-10 rounded-full bg-line-strong" />
+        </div>
+
+        <div className="px-4 pb-3 lg:px-3 lg:pb-2 lg:pt-2.5">
+          <p className="truncate text-base font-semibold text-primary lg:text-sm lg:font-medium">
+            {name}
+          </p>
+          <p className="truncate text-sm text-muted lg:text-xs">{email}</p>
+        </div>
+
+        <div className="border-t border-line" role="separator" />
+
+        {links.map((link, index) => (
+          <Link
+            key={link.href}
+            ref={(element) => {
+              itemRefs.current[index] = element;
+            }}
+            href={link.href}
+            role="menuitem"
+            tabIndex={-1}
+            onClick={() => close(false)}
+            className={itemClass}
+          >
+            <Icon name={link.icon} size={18} />
+            {link.label}
+          </Link>
+        ))}
+
+        {/* Appearance moved out of the mobile header and in here. */}
+        <div className="press flex min-h-[48px] items-center gap-3 px-4 lg:hidden">
+          <Icon name="sun" size={18} />
+          <span className="flex-1 text-[0.9375rem] text-primary">Appearance</span>
+          <ThemeToggle />
+        </div>
+
+        <div className="border-t border-line" role="separator" />
+
+        {error ? (
+          <p role="alert" className="px-4 py-2 text-xs font-medium text-danger lg:px-3">
+            {error}
+          </p>
+        ) : null}
+
+        <button
+          ref={(element) => {
+            itemRefs.current[links.length] = element;
+          }}
+          type="button"
+          role="menuitem"
+          tabIndex={-1}
+          aria-busy={pending}
+          onClick={() => void signOut(() => close(false))}
+          className={`${itemClass} font-medium`}
+        >
+          <Icon name="logout" size={18} />
+          {pending ? "Signing out…" : "Sign out"}
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <div ref={rootRef} className="relative" onKeyDown={onKeyDown}>
@@ -162,8 +225,6 @@ export function AccountMenu({
             close(false);
             return;
           }
-          // `detail === 0` is a keyboard activation, which is the only case that
-          // should move focus into the list.
           openAt(0, event.detail === 0);
         }}
         aria-haspopup="menu"
@@ -176,74 +237,11 @@ export function AccountMenu({
         {initials}
       </button>
 
-      {open ? (
-        <div
-          id={menuId}
-          role="menu"
-          aria-labelledby={triggerId}
-          className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-64 overflow-hidden rounded-[var(--radius-xl)] border border-line bg-surface-raised py-1 shadow-[var(--shadow-float)]"
-        >
-          {/* Identity, not a control: a learner should be able to confirm which
-              account they are in without signing out to find out. */}
-          <div className="px-3 pb-2 pt-2.5">
-            <p className="truncate text-sm font-medium text-primary">{name}</p>
-            <p className="truncate text-xs text-muted">{email}</p>
-          </div>
-
-          <div className="my-1 border-t border-line" role="separator" />
-
-          {links.map((link, index) => (
-            <Link
-              key={link.href}
-              ref={(element) => {
-                itemRefs.current[index] = element;
-              }}
-              href={link.href}
-              role="menuitem"
-              tabIndex={-1}
-              onClick={() => close(false)}
-              className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-primary transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ring)]"
-            >
-              <Icon name={link.icon} size={16} />
-              {link.label}
-            </Link>
-          ))}
-
-          <div className="my-1 border-t border-line" role="separator" />
-
-          {/*
-            Sign out is last and behind a separator, which is what makes it
-            unmistakable without making it alarming. It is a form, not a link: it
-            mutates server state by revoking the session, and only a Server Action
-            can clear the httpOnly cookies.
-          */}
-          <form
-            action={signOutAction}
-            onSubmit={clearClientState}
-            className="contents"
-          >
-            <button
-              ref={(element) => {
-                itemRefs.current[links.length] = element;
-              }}
-              type="submit"
-              role="menuitem"
-              tabIndex={-1}
-              disabled={submitting}
-              onClick={() => setSubmitting(true)}
-              className={cx(
-                "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium transition-colors",
-                "text-primary hover:bg-surface-hover",
-                "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ring)]",
-                submitting && "opacity-60",
-              )}
-            >
-              <Icon name="logout" size={16} />
-              {submitting ? "Signing out…" : "Sign out"}
-            </button>
-          </form>
-        </div>
-      ) : null}
+      {/* Portalled out of the header, whose backdrop-filter would otherwise trap
+          a fixed-position panel. */}
+      {open && typeof document !== "undefined"
+        ? createPortal(panel, document.body)
+        : null}
     </div>
   );
 }

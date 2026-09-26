@@ -30,65 +30,77 @@ export type PulseItem = {
 
 export function LearningPulse({ items }: { items: PulseItem[] }) {
   return (
-    <div className="rounded-[var(--radius-xl)] border border-line bg-surface-raised">
-      <dl className="grid grid-cols-2 divide-line sm:grid-cols-3 lg:grid-cols-6 lg:divide-x">
-        {items.map((item, index) => (
-          <div
-            key={item.label}
-            className={cx(
-              "flex flex-col gap-2 px-5 py-4",
-              // Hairlines between cells on the narrow layout too, without drawing
-              // a full border box around each one.
-              index > 0 && "border-t border-line sm:border-t-0",
-              index % 2 === 1 && "border-l border-line sm:border-l-0",
-              index >= 2 && "sm:border-t sm:border-line lg:border-t-0",
-            )}
-          >
-            <dt className="flex items-center gap-1.5 text-xs font-medium text-muted">
-              <Icon name={item.icon} size={13} />
-              {item.label}
-            </dt>
-            <dd>
-              <span
+    <>
+      {/*
+        On a phone: a label-and-number strip with **no boxes at all**.
+
+        This replaced a 2×3 grid of bordered cells that consumed roughly a third
+        of the screen to convey six numbers, most of which are empty on a new
+        account. Removing the containers is the single biggest vertical saving on
+        the mobile dashboard, and it also stops the page reading like an admin
+        summary.
+      */}
+      <div className="flex flex-col gap-2.5 lg:hidden">
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
+          Learning pulse
+        </p>
+        <dl className="grid grid-cols-3 gap-x-3 gap-y-3">
+          {items.map((item) => (
+            <div key={item.label} className="flex min-w-0 flex-col gap-0.5">
+              <dt className="flex items-center gap-1.5 truncate text-[11px] text-muted">
+                <Icon name={item.icon} size={12} />
+                {item.label}
+              </dt>
+              <dd
                 className={cx(
-                  "block text-xl font-semibold tabular-nums tracking-tight",
+                  "truncate text-base font-semibold tabular-nums",
                   item.value === null ? "text-muted" : "text-primary",
                 )}
               >
                 {item.value === null ? "—" : item.value}
-              </span>
-              {item.hint ? (
-                <span className="mt-0.5 block text-[11px] text-muted">{item.hint}</span>
-              ) : null}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
-              {item.spark && item.spark.length > 0 ? (
-                <span className="mt-2 flex items-end gap-0.5" aria-hidden="true">
-                  {item.spark.map((value, sparkIndex) => (
-                    <span
-                      key={sparkIndex}
-                      className="w-1 rounded-full bg-accent/40"
-                      style={{ height: `${Math.max(3, Math.min(20, value * 20))}px` }}
-                    />
-                  ))}
-                </span>
-              ) : item.trend !== null && item.trend !== undefined ? (
-                <span
-                  aria-hidden="true"
-                  className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-track"
-                >
-                  <span
-                    className="block h-full rounded-full bg-accent"
-                    style={{ width: `${Math.max(0, Math.min(1, item.trend)) * 100}%` }}
-                  />
-                </span>
-              ) : null}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {/* Desktop keeps the bordered band; there is room for it there. */}
+      <div className="hidden rounded-[var(--radius-xl)] border border-line bg-surface-raised lg:block">
+        <dl className="grid grid-cols-6 divide-x divide-line">
+          {items.map((item) => (
+            <PulseCell key={item.label} item={item} />
+          ))}
+        </dl>
+      </div>
+    </>
+  );
+}
+
+/** The roomy cell used on desktop, where there is space for a label above the value. */
+function PulseCell({ item }: { item: PulseItem }) {
+  return (
+    <div className="flex flex-col gap-2 px-5 py-4">
+      <dt className="flex items-center gap-1.5 text-xs font-medium text-muted">
+        <Icon name={item.icon} size={13} />
+        {item.label}
+      </dt>
+      <dd>
+        <span
+          className={cx(
+            "block text-xl font-semibold tabular-nums tracking-tight",
+            item.value === null ? "text-muted" : "text-primary",
+          )}
+        >
+          {item.value === null ? "—" : item.value}
+        </span>
+        {item.hint ? (
+          <span className="mt-0.5 block text-[11px] text-muted">{item.hint}</span>
+        ) : null}
+      </dd>
     </div>
   );
 }
+
 
 /**
  * A speech waveform, drawn as a static path.

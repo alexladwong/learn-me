@@ -51,6 +51,7 @@ const ROUTES = [
   { path: "/fr/bank", name: "bank" },
   { path: "/fr/settings", name: "settings" },
   { path: "/fr/settings?section=account", name: "settings-account" },
+  { path: "/fr/settings?section=plan", name: "settings-plan" },
   { path: "/fr/onboarding?step=1", name: "onboarding-1" },
   { path: "/fr/onboarding?step=4", name: "onboarding-4" },
   { path: "/fr/onboarding?step=6", name: "onboarding-6" },

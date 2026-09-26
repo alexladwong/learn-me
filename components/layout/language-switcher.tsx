@@ -268,14 +268,14 @@ export function LanguageSwitcher({
          * 44px on a phone, where this is a thumb target, and 36px from `sm` up,
          * where it lines up with the theme and settings controls beside it.
          */
-        className="flex min-h-[44px] min-w-0 items-center gap-1.5 rounded-[var(--radius)] border border-line bg-surface-raised px-2.5 py-1.5 text-sm transition-colors hover:bg-surface-hover sm:min-h-[36px]"
+        className="press flex min-h-[36px] min-w-0 items-center gap-1.5 rounded-[var(--radius)] border border-line bg-surface-raised px-2 py-1 text-sm hover:bg-surface-hover"
       >
         <span aria-hidden="true" className="shrink-0 leading-none">
           {current.flag ?? "🌐"}
         </span>
         <span className="min-w-0 truncate font-medium text-primary">{current.name}</span>
         {current.level ? (
-          <span className="hidden shrink-0 rounded-[var(--radius-sm)] bg-surface-sunken px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted sm:inline">
+          <span className="shrink-0 rounded-[var(--radius-sm)] bg-surface-sunken px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted sm:text-[11px]">
             {current.level}
           </span>
         ) : null}

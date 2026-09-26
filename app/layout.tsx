@@ -94,7 +94,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {NAV_SCRIPT}
         </Script>
       </head>
-      <body className="min-h-full bg-surface text-primary antialiased">
+      {/*
+        `suppressHydrationWarning` on <body>, not just <html>.
+
+        Browser extensions inject attributes into the body before React hydrates —
+        Grammarly adds `data-gr-ext-installed` and `data-new-gr-c-s-check-loaded`
+        — and React reports the difference as a hydration mismatch. It is a genuine
+        mismatch and an entirely false alarm, and it put a permanent "1 Issue"
+        badge on the dev overlay that made every screenshot look broken.
+
+        This suppresses the warning for this element only; real mismatches inside
+        the tree are still reported.
+      */}
+      <body
+        className="min-h-full bg-surface text-primary antialiased"
+        suppressHydrationWarning
+      >
         {children}
           {/* Add Here */}
         

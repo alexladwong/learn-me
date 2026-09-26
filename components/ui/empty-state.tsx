@@ -99,7 +99,10 @@ export function Badge({
       className={cx(
         // A soft rectangle rather than a pill: a pill badge is the single most
         // toy-like shape in an interface, and these carry real state.
-        "inline-flex items-center rounded-[var(--radius-sm)] px-1.5 py-0.5 text-xs font-medium",
+        // Tighter on a phone, where chips often appear in rows of two or three and
+        // their padding is most of the row's height. Desktop keeps the roomier
+        // version.
+        "inline-flex items-center rounded-[var(--radius-sm)] px-1.5 py-0 text-[10px] font-medium leading-5 sm:px-2 sm:py-0.5 sm:text-xs",
         tones[tone],
         className,
       )}

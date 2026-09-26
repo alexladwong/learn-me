@@ -196,13 +196,39 @@ export async function signUpAction(
  * shared device or a borrowed laptop is the whole problem. The cookies are
  * cleared here explicitly as well, so "sign out" actually means signed out.
  */
-export async function signOutAction(): Promise<void> {
+export type SignOutResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * End the session.
+ *
+ * ## Why this returns a result instead of calling `redirect()`
+ *
+ * It used to revoke the session, clear the cookies and then `redirect("/")`.
+ * That reads well and behaves badly: the redirect is thrown from inside the
+ * action, so the client's pending state is only cleared when the navigation
+ * completes. Any stall between here and there — a slow revoke, a dropped
+ * connection in the Capacitor WebView — left the button on "Signing out…"
+ * indefinitely, with no error and no way back.
+ *
+ * Returning a result puts the caller in charge of what happens next, so it can
+ * use try/catch/finally and guarantee the pending state clears either way.
+ *
+ * ## The session is still really invalidated
+ *
+ * The cookie deletion below is the part that matters, and it happens on **every**
+ * path including failure. `auth.signOut()` revokes the refresh token server-side;
+ * if that request fails we still clear the cookies, because leaving a learner
+ * signed in on a device they asked to leave is the worse outcome.
+ */
+export async function signOutAction(): Promise<SignOutResult> {
   const cookieStore = await cookies();
   const auth = createAuthActions({ cookies: cookieStore });
 
+  let revoked = true;
   try {
     await auth.signOut();
   } catch (error) {
+    revoked = false;
     // A failed revoke must not leave the learner stuck signed in: fall through
     // and clear the cookies regardless.
     console.error("[auth] sign-out request failed", {
@@ -210,12 +236,21 @@ export async function signOutAction(): Promise<void> {
     });
   }
 
-  cookieStore.delete(DEFAULT_ACCESS_TOKEN_COOKIE);
-  cookieStore.delete(DEFAULT_REFRESH_TOKEN_COOKIE);
-  // Written when an OAuth flow starts; clearing it avoids a stale attempt.
-  cookieStore.delete("insforge_code_verifier");
+  try {
+    cookieStore.delete(DEFAULT_ACCESS_TOKEN_COOKIE);
+    cookieStore.delete(DEFAULT_REFRESH_TOKEN_COOKIE);
+    // Written when an OAuth flow starts; clearing it avoids a stale attempt.
+    cookieStore.delete("insforge_code_verifier");
+  } catch (error) {
+    console.error("[auth] clearing session cookies failed", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, error: "Could not sign out on this device. Please try again." };
+  }
 
-  redirect("/");
+  // The cookies are gone either way, so the learner *is* signed out locally.
+  // The flag only tells the caller whether the server-side revoke also landed.
+  return { ok: true, revoked } as SignOutResult;
 }
 
 /**

@@ -280,15 +280,15 @@ function PlanPane({
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {/* ---- Summary ------------------------------------------------------- */}
-      <section className="rounded-[var(--radius-xl)] border border-line bg-surface-raised p-5 sm:p-7">
-        <h2 className="text-lg font-semibold tracking-tight text-primary">
+      <section className="rounded-[var(--radius-xl)] border border-line bg-surface-raised p-4 sm:p-7">
+        <h2 className="text-base font-semibold tracking-tight text-primary sm:text-lg">
           Your {language.name_en} plan
         </h2>
 
         {/* A level track: the one place a progress-like visual is genuinely
             meaningful, because it shows where you are and where you are going. */}
-        <div className="mt-6">
-          <div className="flex items-center justify-between text-xs font-medium text-muted">
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-[10px] font-medium text-muted">
             <span>A1</span>
             <span>C1</span>
           </div>
@@ -307,13 +307,27 @@ function PlanPane({
               }}
             />
           </div>
-          <p className="mt-2 text-sm text-secondary">
-            <span className="font-medium text-primary">{from}</span> now · aiming for{" "}
-            <span className="font-medium text-primary">{to}</span>
+          {/*
+            The level pair is the headline of this card.
+
+            It was a sentence — "A1 now · aiming for B1" at `text-sm` — which made
+            the single most important fact about the plan the least prominent thing
+            in it. The A1→C1 axis above stays as long-term scale context; this is
+            the near-term step.
+          */}
+          <p className="mt-3 flex items-baseline gap-2.5">
+            <span className="text-2xl font-semibold tabular-nums tracking-tight text-primary">
+              {from}
+            </span>
+            <Icon name="arrowRight" size={16} className="translate-y-[-2px] text-muted" />
+            <span className="text-2xl font-semibold tabular-nums tracking-tight text-accent">
+              {to}
+            </span>
+            <span className="text-xs text-muted">your next step</span>
           </p>
         </div>
 
-        <dl className="mt-7 grid gap-5 border-t border-line pt-6 sm:grid-cols-3">
+        <dl className="mt-5 grid gap-4 border-t border-line pt-5 sm:mt-7 sm:gap-5 sm:pt-6 sm:grid-cols-3">
           <div>
             <dt className="text-xs font-medium text-muted">Daily target</dt>
             <dd className="mt-1 text-base font-semibold text-primary">
@@ -359,7 +373,7 @@ function PlanPane({
       <form action={formAction}>
         <input type="hidden" name="languageCode" value={language.code} />
         <details className="group rounded-[var(--radius-xl)] border border-line bg-surface-raised">
-          <summary className="flex min-h-[56px] cursor-pointer items-center justify-between gap-3 px-5 py-4 text-sm font-medium text-primary sm:px-7">
+          <summary className="press flex min-h-[52px] cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-primary marker:content-none sm:min-h-[56px] sm:px-7 sm:py-4">
             Edit plan
             <span
               aria-hidden="true"

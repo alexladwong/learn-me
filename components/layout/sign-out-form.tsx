@@ -1,37 +1,39 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
 import { Icon } from "@/components/ui/icon";
-import { signOutAction } from "@/app/(auth)/actions";
-
-function SignOutButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="press flex min-h-[44px] w-full items-center justify-center gap-3 rounded-[var(--radius)] px-3 text-sm font-medium text-secondary hover:bg-surface-hover hover:text-primary disabled:opacity-60"
-    >
-      <Icon name="logout" size={18} />
-      {/* Hidden at rail width, where an icon plus a label does not fit. */}
-      <span className="rail-only-expanded">
-        {pending ? "Signing out…" : "Sign out"}
-      </span>
-    </button>
-  );
-}
+import { useSignOut } from "@/lib/auth/sign-out-client";
 
 /**
- * Sign-out control.
+ * Sign-out control for the settings Account pane.
  *
- * A form (not a link) because signing out mutates server state — it clears the
- * httpOnly session cookies, which only a Server Action can do.
+ * A button rather than a `<form action={…}>`: the shared `useSignOut` hook owns
+ * the flow so a stalled request cannot leave this stuck on "Signing out…". See
+ * that module for why.
  */
 export function SignOutForm() {
+  const { signOut, pending, error } = useSignOut();
+
   return (
-    <form action={signOutAction}>
-      <SignOutButton />
-    </form>
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => void signOut()}
+        disabled={false}
+        aria-busy={pending}
+        className="press flex min-h-[44px] w-full items-center justify-center gap-3 rounded-[var(--radius)] px-3 text-sm font-medium text-secondary hover:bg-surface-hover hover:text-primary"
+      >
+        <Icon name="logout" size={18} />
+        {/* Hidden at rail width, where an icon plus a label does not fit. */}
+        <span className="rail-only-expanded">
+          {pending ? "Signing out…" : "Sign out"}
+        </span>
+      </button>
+
+      {error ? (
+        <p role="alert" className="text-xs font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

@@ -23,10 +23,19 @@
     "shoot": "node --env-file=.env.local scripts/shoot.mjs",
     "verify:switcher": "node --env-file=.env.local scripts/verify-language-switcher.mjs",
     "cap:sync": "npx cap sync",
-    "cap:ios": "npx cap sync ios && npx cap open ios",
-    "cap:android": "CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL:-http://10.0.2.2:3000} npx cap sync android && npx cap open android",
+    "cap:ios": "CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL:-http://localhost:3000} npx cap sync ios",
+    "cap:android": "CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL:-http://10.0.2.2:3000} npx cap sync android",
     "icons": "node scripts/generate-app-icons.mjs",
-    "verify:native": "node --env-file=.env.local scripts/verify-native-auth.mjs"
+    "verify:native": "node --env-file=.env.local scripts/verify-native-auth.mjs",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android",
+    "verify:overflow": "node --env-file=.env.local scripts/verify-mobile-overflow.mjs",
+    "verify:signout": "node --env-file=.env.local scripts/verify-signout.mjs",
+    "cap:ios:dev": "CAPACITOR_SERVER_URL=http://localhost:3000 npx cap sync ios",
+    "cap:android:dev": "CAPACITOR_SERVER_URL=http://10.0.2.2:3000 npx cap sync android",
+    "cap:ios:prod": "CAPACITOR_SERVER_URL=https://learn-me-01.vercel.app npx cap sync ios",
+    "cap:android:prod": "CAPACITOR_SERVER_URL=https://learn-me-01.vercel.app npx cap sync android",
+    "cap:ios:lan": "CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL:?set CAPACITOR_SERVER_URL=http://<MAC-LAN-IP>:3000} npx cap sync ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

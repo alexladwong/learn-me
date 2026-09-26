@@ -67,6 +67,25 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<!--
+		App Transport Security.
+
+		Production loads https://learn-me-01.vercel.app, which needs no exception.
+
+		This one key exists so a *physical iPhone* can be pointed at a development
+		server on the Mac over the LAN (`http://192.168.x.x:3000`), which is plain
+		HTTP and would otherwise be blocked outright. `NSAllowsLocalNetworking`
+		permits cleartext only to local-network hosts — .local names, link-local
+		and RFC1918 addresses — and deliberately does NOT open arbitrary HTTP to
+		the public internet. `NSAllowsArbitraryLoads` would, and is not used.
+
+		Remove this if you never test against a LAN dev server.
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!--
 		The OAuth return path. Google blocks sign-in inside an embedded webview, so
 		the flow has to finish in the system browser and come back here as
 		learnme://auth/callback?… — which `@capacitor/app`'s `appUrlOpen` delivers

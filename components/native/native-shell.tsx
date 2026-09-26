@@ -49,10 +49,24 @@ export function NativeShell() {
     let disposers: Array<() => void> = [];
 
     void (async () => {
-      // Imported dynamically: none of these packages is meaningful in a browser
-      // tab, and pulling them into the web bundle would ship dead code.
-      const { Capacitor } = await import("@capacitor/core");
-      if (!Capacitor.isNativePlatform()) return;
+      /*
+       * Uses the shared detector rather than `Capacitor.isNativePlatform()`
+       * directly, because a false negative here is silent: no listeners, no deep
+       * link, and a sign-in that opens a browser and never comes back. The
+       * detector also checks the native bridge globals.
+       *
+       * Imported dynamically because none of these packages is meaningful in a
+       * browser tab, and pulling them into the web bundle would ship dead code.
+       */
+      const { isNativeShell } = await import("@/lib/auth/native-client");
+      const native = await isNativeShell();
+      if (!native) {
+        // Expected in a browser tab. Logged so that a *false* negative on a real
+        // device is visible in the Xcode / Logcat console instead of silent.
+        console.info("[learnme] not running in the native shell; native features off");
+        return;
+      }
+      console.info("[learnme] native shell detected; registering listeners");
 
       const [{ App }, { StatusBar, Style }, { Network }, { Haptics, ImpactStyle }] =
         await Promise.all([

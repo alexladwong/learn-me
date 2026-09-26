@@ -8,7 +8,7 @@ import {
   DEFAULT_ACCESS_TOKEN_COOKIE,
   DEFAULT_REFRESH_TOKEN_COOKIE,
 } from "@insforge/sdk/ssr";
-import { appUrl } from "@/lib/env";
+import { oauthCallbackOrigin } from "@/lib/env";
 import { safeNextPath } from "@/lib/auth/session";
 import { signInMethodsFor } from "@/lib/auth/methods";
 import { userFacingMessage } from "@/lib/errors";
@@ -230,7 +230,10 @@ export async function startOAuthAction(): Promise<AuthFormState> {
   const auth = createAuthActions({ cookies: cookieStore });
 
   const { data, error } = await auth.signInWithOAuth("google", {
-    redirectTo: new URL("/api/auth/callback", appUrl()).toString(),
+    // Derived from the request, so localhost, production and a future custom
+    // domain each get their own callback without a code change. The native flow
+    // uses `learnme://auth/callback` instead and never comes through here.
+    redirectTo: new URL("/api/auth/callback", await oauthCallbackOrigin()).toString(),
     skipBrowserRedirect: true,
   });
 

@@ -148,6 +148,81 @@ export function resolveAppOrigin(
 }
 
 /**
+ * The origin to send an OAuth provider back to, for the **web** flow.
+ *
+ * Derived from the incoming request rather than from a constant, so localhost,
+ * the production domain and any future custom domain all work with no code
+ * change — the provider only has to have the callback allowlisted, which is
+ * configuration (`insforge.toml`), not source.
+ *
+ * ## Why the request and not `appUrl()`
+ *
+ * `appUrl()` answers "what is our canonical public origin", which is the right
+ * question for metadata and nothing else. Using it for the callback meant the
+ * sign-in redirect depended on an environment variable matching the host the
+ * learner was actually on: on production that happened to hold, but it is one
+ * misconfiguration away from sending a localhost user to production or the
+ * reverse.
+ *
+ * ## Previews and the explicit override
+ *
+ * A Vercel preview gets a fresh hostname per deployment, and no provider will
+ * ever allowlist all of them. `OAUTH_CALLBACK_ORIGIN` is the deliberate way to
+ * pin those to a stable, allowlisted domain: set it in the Preview environment
+ * to the production origin. It is server-only and opt-in, so it cannot
+ * accidentally pin production or local development.
+ *
+ * The native flow never calls this. `learnme://auth/callback` is its own scheme
+ * and substituting a web origin for it is what would break sign-in on a phone.
+ */
+export async function oauthCallbackOrigin(): Promise<string> {
+  const override = process.env.OAUTH_CALLBACK_ORIGIN?.trim();
+  if (override) {
+    return resolveAppOrigin(override, {
+      deployed: process.env.VERCEL_ENV === "production",
+    });
+  }
+
+  // Imported here rather than at module scope: this module is read by code that
+  // never has a request, and `headers()` throws outside one.
+  const { headers } = await import("next/headers");
+  const list = await headers();
+
+  const derived = originFromForwardedHeaders({
+    host: list.get("x-forwarded-host") ?? list.get("host"),
+    proto: list.get("x-forwarded-proto"),
+  });
+
+  // No usable request headers: the canonical origin is the only answer left.
+  return derived ?? appUrl();
+}
+
+/**
+ * Build an origin from forwarded headers, or `null` when there is no host.
+ *
+ * Pure, so the awkward parts are testable: proxy chains send comma-separated
+ * lists, and a bare `localhost` arrives with no proto header at all because
+ * nothing fronted it with TLS.
+ */
+export function originFromForwardedHeaders(input: {
+  host: string | null;
+  proto: string | null;
+}): string | null {
+  const host = input.host?.split(",")[0]?.trim();
+  if (!host) return null;
+
+  const forwardedProto = input.proto?.split(",")[0]?.trim();
+  const proto =
+    forwardedProto === "http" || forwardedProto === "https"
+      ? forwardedProto
+      : /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host)
+        ? "http"
+        : "https";
+
+  return `${proto}://${host}`;
+}
+
+/**
  * The origin that actually served this request.
  *
  * Preferred over `appUrl()` inside Route Handlers, because a Vercel **preview**

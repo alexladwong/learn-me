@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { startOAuthAction, type AuthFormState } from "@/app/(auth)/actions";
 import { FormError } from "@/components/ui/form";
@@ -20,22 +20,47 @@ export function GoogleButton({ label }: { label: string }) {
   const [starting, setStarting] = useState(false);
 
   /*
-   * Only the *start* of the flow differs between web and native; the button, its
-   * label, its pending state and its error slot are shared. Google refuses OAuth
-   * inside a WebView, so the shell hands off to the system browser and comes back
-   * through `learnme://auth/callback` — everything after that is the same app.
+   * Whether we are inside the Capacitor shell.
+   *
+   * Resolved in an effect, never during render: the server has no bridge, so a
+   * render-time check would produce different markup on the server and the first
+   * client render. Starting at `false` keeps the first paint identical and lets
+   * hydration complete before anything changes.
    */
-  async function onClick(event: React.MouseEvent<HTMLButtonElement>) {
-    const { isNativeShell, beginNativeSignIn } = await import("@/lib/auth/native-client");
-    if (!(await isNativeShell())) return; // fall through to the form action
+  const [isNative, setIsNative] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { isNativeShell } = await import("@/lib/auth/native-client");
+      const native = await isNativeShell();
+      if (!cancelled) setIsNative(native);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-    event.preventDefault();
+  /**
+   * The native flow.
+   *
+   * This used to be wired to the submit button's `onClick`, which was async and
+   * called `preventDefault()` only after awaiting the platform check. By then the
+   * event had already finished dispatching and the form had submitted, so the
+   * WebView navigated to Google instead — and Google refuses OAuth inside an
+   * embedded WebView. The native path was effectively never taken.
+   *
+   * Rendering a real `type="button"` removes the race entirely: there is no form
+   * submission to prevent.
+   */
+  async function startNative() {
     setNativeError(null);
     setStarting(true);
     try {
+      const { beginNativeSignIn } = await import("@/lib/auth/native-client");
       const result = await beginNativeSignIn();
       if ("error" in result) setNativeError(result.error);
-      // On success the system browser has taken over; the deep link resumes us.
+      // On success the system browser owns the screen; `learnme://auth/callback`
+      // brings the learner back and `NativeShell` finishes the exchange.
     } catch {
       setNativeError("Could not open the sign-in page.");
     } finally {
@@ -43,19 +68,30 @@ export function GoogleButton({ label }: { label: string }) {
     }
   }
 
-  return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <FormError message={nativeError ?? state.error} />
-      <span onClick={onClick} className="contents">
-        <SubmitButton
-          variant="secondary"
-          fullWidth
-          pendingLabel={starting ? "Opening…" : "Redirecting…"}
+  if (isNative) {
+    return (
+      <div className="flex flex-col gap-3">
+        <FormError message={nativeError} />
+        <button
+          type="button"
+          onClick={() => void startNative()}
+          disabled={starting}
+          className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[var(--radius)] border border-line-strong bg-surface-raised px-4 text-sm font-medium text-primary transition-colors hover:bg-surface-hover disabled:opacity-60"
         >
           <GoogleMark />
-          {label}
-        </SubmitButton>
-      </span>
+          {starting ? "Opening Google…" : label}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <FormError message={state.error} />
+      <SubmitButton variant="secondary" fullWidth pendingLabel="Redirecting…">
+        <GoogleMark />
+        {label}
+      </SubmitButton>
     </form>
   );
 }

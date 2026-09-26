@@ -5,6 +5,7 @@ import { ServiceWorkerRegistrar } from "@/components/layout/service-worker";
 import { AudioLifecycle } from "@/components/layout/audio-lifecycle";
 import { NativeShell } from "@/components/native/native-shell";
 import { THEME_SCRIPT } from "@/components/layout/theme-toggle";
+import { NAV_SCRIPT } from "@/components/layout/nav-state";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import "./globals.css";
 
@@ -86,6 +87,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         */}
         <Script id="theme-restore" strategy="beforeInteractive">
           {THEME_SCRIPT}
+        </Script>
+        {/* Same reason as the theme: the rail's width is a layout decision, so it
+            has to be settled before the first paint or the page jumps. */}
+        <Script id="nav-restore" strategy="beforeInteractive">
+          {NAV_SCRIPT}
         </Script>
       </head>
       <body className="min-h-full bg-surface text-primary antialiased">

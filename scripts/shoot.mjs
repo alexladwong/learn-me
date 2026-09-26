@@ -50,6 +50,7 @@ const ROUTES = [
   { path: "/fr/path", name: "path" },
   { path: "/fr/bank", name: "bank" },
   { path: "/fr/settings", name: "settings" },
+  { path: "/fr/settings?section=account", name: "settings-account" },
   { path: "/fr/onboarding?step=1", name: "onboarding-1" },
   { path: "/fr/onboarding?step=4", name: "onboarding-4" },
   { path: "/fr/onboarding?step=6", name: "onboarding-6" },
@@ -62,6 +63,10 @@ const ROUTES = [
 const VIEWPORTS = [
   { suffix: "desktop", width: 1440, height: 900, mobile: false },
   { suffix: "390", width: 390, height: 844, mobile: true },
+  // The narrowest supported phone, where a row that cannot shrink finally shows
+  // it. 390 alone hides these: an iPhone 14 has 60px more to play with.
+  { suffix: "320", width: 320, height: 700, mobile: true },
+  { suffix: "430", width: 430, height: 932, mobile: true },
 ];
 
 const only = process.argv.slice(2).filter((arg) => arg.startsWith("/"));
@@ -103,7 +108,8 @@ const password = "shots-probe-1234";
 let userId = null;
 
 async function cleanup() {
-  if (!userId) return;
+  // Never delete an account this run did not create.
+  if (!userId || process.env.SHOT_TOKEN) return;
   try {
     await admin.database.from("profiles").delete().eq("id", userId);
     await fetch(`${apiUrl}/api/auth/users`, {
@@ -118,16 +124,27 @@ async function cleanup() {
 }
 
 try {
+  /*
+   * Usually a fresh account, but `SHOT_TOKEN` reuses an existing session. That
+   * exists because the interesting states are the populated ones: an empty bank
+   * renders an empty state, which says nothing about how a list of twelve saved
+   * items behaves at 320px. The token is a throwaway probe session, not a secret.
+   */
+  const reuseToken = process.env.SHOT_TOKEN?.trim();
+  const reuseRefresh = process.env.SHOT_REFRESH?.trim();
+
   // ── A real account, with a real plan ─────────────────────────────────────
-  const signUp = await anon.auth.signUp({ email, password, name: "Shots Probe" });
-  if (signUp.error) throw new Error(`signup: ${signUp.error.message}`);
+  const signUp = reuseToken
+    ? { data: { user: { id: process.env.SHOT_USER_ID }, accessToken: reuseToken, refreshToken: reuseRefresh } }
+    : await anon.auth.signUp({ email, password, name: "Shots Probe" });
+  if (!reuseToken && signUp.error) throw new Error(`signup: ${signUp.error.message}`);
   userId = signUp.data?.user?.id;
   const accessToken = signUp.data?.accessToken;
   const refreshToken = signUp.data?.refreshToken;
   if (!userId || !accessToken) throw new Error("signup returned no session");
 
-  const authed = createClient({ baseUrl: apiUrl, anonKey, accessToken });
-  const seeded = await authed.database.from("learner_languages").upsert(
+  const authed = createClient({ baseUrl: apiUrl, anonKey: accessToken });
+  const seeded = reuseToken ? { error: null } : await authed.database.from("learner_languages").upsert(
     [
       {
         user_id: userId,
@@ -143,10 +160,12 @@ try {
     { onConflict: "user_id,language_code" },
   );
   if (seeded.error) throw new Error(`seed: ${seeded.error.message}`);
-  await authed.database
-    .from("profiles")
-    .update({ onboarding_state: "complete", native_language: "en" })
-    .eq("id", userId);
+  if (!reuseToken) {
+    await authed.database
+      .from("profiles")
+      .update({ onboarding_state: "complete", native_language: "en" })
+      .eq("id", userId);
+  }
 
   // ── Chrome ───────────────────────────────────────────────────────────────
   let ws;
@@ -267,6 +286,15 @@ try {
             );
           }
         }
+      }
+      // `SHOT_NAV=expanded` seeds the rail preference before first paint, so the
+      // capture shows the real layout rather than a post-hydration toggle.
+      if (process.env.SHOT_NAV) {
+        await send(
+          "Page.addScriptToEvaluateOnNewDocument",
+          { source: `try{localStorage.setItem("learn-me:nav",${JSON.stringify(process.env.SHOT_NAV)})}catch(e){}` },
+          sessionId,
+        );
       }
       await send("Page.navigate", { url: `${BASE}${route.path}` }, sessionId);
 

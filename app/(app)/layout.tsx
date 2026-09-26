@@ -2,6 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { BottomNav, SidebarNav } from "@/components/layout/nav";
+import { PageTransition } from "@/components/layout/page-transition";
+import { NavToggle } from "@/components/layout/nav-state";
+import { AccountMenu } from "@/components/layout/account-menu";
 import { SignOutForm } from "@/components/layout/sign-out-form";
 import {
   LanguageSwitcher,
@@ -61,7 +64,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const knownLanguages = learnerLanguages.map((entry) => entry.language_code);
 
   return (
-    <div className="min-h-dvh bg-surface lg:grid lg:grid-cols-[84px_1fr]">
+    <div className="min-h-dvh bg-surface lg:grid lg:grid-cols-[var(--nav-width)_minmax(0,1fr)]">
       {/* Skip link: the first tab stop, so keyboard users are not forced through
           the rail on every navigation. */}
       <a
@@ -72,14 +75,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </a>
 
       {/* ---- Rail (desktop) ------------------------------------------------ */}
-      <aside className="sticky top-0 hidden h-dvh border-r border-line bg-surface-raised lg:flex lg:flex-col">
+      <aside
+        id="app-rail"
+        className="sticky top-0 hidden h-dvh overflow-hidden border-r border-line bg-surface-raised transition-[width] duration-200 lg:flex lg:flex-col"
+      >
         <SidebarNav
           lang={primary.language_code}
           knownLanguages={knownLanguages}
           languageName={primary.language.name_en}
         />
 
-        <div className="mt-auto flex flex-col items-center gap-3 border-t border-line px-2 py-4">
+        <div className="rail-footer mt-auto flex flex-col items-center gap-3 border-t border-line px-2 py-4">
           <Link
             href={`/${primary.language_code}/settings`}
             title={`${displayName} — account settings`}
@@ -89,10 +95,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             {displayName.slice(0, 2)}
           </Link>
           <SignOutForm />
+          <NavToggle />
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-col">
+      {/* The column width animates with the rail, so the content slides
+            rather than jumping. */}
+      <div className="flex min-w-0 flex-col transition-[padding] duration-200">
         {/* ---- Top utility bar --------------------------------------------- */}
         <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
           <div className="flex items-center gap-3 px-4 py-2.5 sm:px-6">
@@ -122,14 +131,20 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               >
                 <Icon name="settings" size={17} />
               </Link>
-              {/* Profile is already the last item in the bottom nav on a phone,
-                  so the initial is redundant below `sm`. */}
-              <span
-                aria-hidden="true"
-                className="hidden size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold uppercase text-accent sm:flex lg:hidden"
-              >
-                {displayName.slice(0, 2)}
-              </span>
+              {/*
+                The account menu, on every screen size.
+
+                This was a decorative span showing two initials, and sign out was
+                reachable only in the desktop rail's footer — which is `hidden`
+                below `lg`, so a phone had no way out at all. Same trigger, now a
+                real control.
+              */}
+              <AccountMenu
+                name={displayName}
+                email={user.email ?? "Signed in"}
+                lang={primary.language_code}
+                initials={displayName.slice(0, 2)}
+              />
             </div>
           </div>
         </header>
@@ -138,7 +153,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           id="main"
           className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-12 lg:pt-7"
         >
-          {children}
+          {/* Replays a short enter animation per route; see the component for
+              why it does not remount the page. */}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
 

@@ -24,7 +24,12 @@ export function BankFilters({
   values,
 }: {
   languageCode: string;
-  counts: { total: number; words: number; sentences: number; favorites: number };
+  counts: {
+    total: number;
+    words: number;
+    sentences: number;
+    favorites: number;
+  };
   values: BankFilterValues;
 }) {
   const router = useRouter();
@@ -40,7 +45,11 @@ export function BankFilters({
     router.push(`/${languageCode}/bank${query ? `?${query}` : ""}`);
   }
 
-  const tabs: Array<{ key: BankFilterValues["kind"]; label: string; count: number }> = [
+  const tabs: Array<{
+    key: BankFilterValues["kind"];
+    label: string;
+    count: number;
+  }> = [
     { key: "all", label: "Everything", count: counts.total },
     { key: "word", label: "Words", count: counts.words },
     { key: "sentence", label: "Sentences", count: counts.sentences },
@@ -64,7 +73,7 @@ export function BankFilters({
               "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors",
               values.kind === tab.key
                 ? "border-accent bg-accent-subtle text-accent"
-                : "border-line-strong bg-surface-raised text-secondary hover:bg-surface-hover",
+                : "border-line-strong bg-surface-raised text-secondary hover:bg-surface-hover"
             )}
           >
             {tab.label}
@@ -81,7 +90,7 @@ export function BankFilters({
             "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors",
             values.favoritesOnly
               ? "border-accent bg-accent-subtle text-accent"
-              : "border-line-strong bg-surface-raised text-secondary hover:bg-surface-hover",
+              : "border-line-strong bg-surface-raised text-secondary hover:bg-surface-hover"
           )}
         >
           <Icon name="practice" size={15} />
@@ -104,7 +113,7 @@ export function BankFilters({
           id="bank-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search the language or the translation"
+          placeholder="Search your bank"
           className="h-11 min-w-0 flex-1 rounded-[var(--radius)] border border-line-strong bg-surface-raised px-3.5 text-sm text-primary placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
         />
         <Button type="submit" variant="secondary">
@@ -176,7 +185,10 @@ function BankEntryCard({
 
   function onRemove() {
     startTransition(async () => {
-      const result = await removeItems({ languageCode, itemIds: [entry.itemId] });
+      const result = await removeItems({
+        languageCode,
+        itemIds: [entry.itemId],
+      });
       if (result.ok) {
         router.refresh();
       } else {
@@ -190,16 +202,18 @@ function BankEntryCard({
   return (
     <article
       className={cx(
-        "rounded-[var(--radius-lg)] border border-line bg-surface-raised p-4 transition-opacity sm:p-5",
-        pending && "opacity-60",
+        "rounded-[var(--radius-lg)] border border-line bg-surface-raised p-3.5 transition-opacity sm:p-5",
+        pending && "opacity-60"
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-target text-lg font-semibold text-primary">
+          <p className="text-target text-base font-semibold text-primary sm:text-lg">
             {entry.surface}
           </p>
-          <p className="mt-1 text-sm text-secondary">{entry.translationNatural}</p>
+          <p className="mt-0.5 text-sm text-secondary">
+            {entry.translationNatural}
+          </p>
           {entry.translationLiteral ? (
             <p className="mt-0.5 text-xs text-muted">
               Literally: {entry.translationLiteral}
@@ -212,10 +226,12 @@ function BankEntryCard({
             type="button"
             onClick={onToggleFavorite}
             aria-pressed={favorite}
-            aria-label={favorite ? "Remove from favourites" : "Add to favourites"}
+            aria-label={
+              favorite ? "Remove from favourites" : "Add to favourites"
+            }
             className={cx(
               "flex size-11 items-center justify-center rounded-full transition-colors",
-              favorite ? "text-accent" : "text-muted hover:bg-surface-hover",
+              favorite ? "text-accent" : "text-muted hover:bg-surface-hover"
             )}
           >
             <Icon name="practice" size={18} />
@@ -231,22 +247,17 @@ function BankEntryCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Badge tone="muted">{entry.kind}</Badge>
-        {entry.partOfSpeech ? <Badge tone="muted">{entry.partOfSpeech}</Badge> : null}
-        <Badge tone={status.tone}>{status.label}</Badge>
-        {entry.savedFrom.startsWith("mission:") ? (
-          <Badge tone="neutral">from a lesson</Badge>
-        ) : null}
-      </div>
-
-      {error ? (
-        <p role="status" className="mt-3 text-sm font-medium text-danger">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="mt-3">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="muted">{entry.kind}</Badge>
+          {entry.partOfSpeech ? (
+            <Badge tone="muted">{entry.partOfSpeech}</Badge>
+          ) : null}
+          <Badge tone={status.tone}>{status.label}</Badge>
+          {entry.savedFrom.startsWith("mission:") ? (
+            <Badge tone="neutral">from a lesson</Badge>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={() => setExpanded((previous) => !previous)}
@@ -254,9 +265,19 @@ function BankEntryCard({
           className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-accent hover:underline"
         >
           {expanded ? "Hide details" : "Show details"}
-          <Icon name="arrowRight" size={14} className={expanded ? "rotate-90" : ""} />
+          <Icon
+            name="arrowRight"
+            size={14}
+            className={expanded ? "rotate-90" : ""}
+          />
         </button>
       </div>
+
+      {error ? (
+        <p role="status" className="mt-3 text-sm font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
 
       {expanded ? (
         <div className="mt-3 flex flex-col gap-4 border-t border-line pt-4">

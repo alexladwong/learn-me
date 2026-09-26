@@ -26,10 +26,47 @@ export type NativeSignInResult =
   | { ok: true; destination: string }
   | { ok: false; error: string };
 
-/** True only inside the Capacitor shell, never in a browser tab. */
+/**
+ * True only inside the Capacitor shell, never in a browser tab.
+ *
+ * ## Why this does not simply call `Capacitor.isNativePlatform()`
+ *
+ * That function resolves to `getPlatform() !== "web"`, and `getPlatform()` reads
+ * the **native-injected bridge globals**: `window.androidBridge` on Android and
+ * `window.webkit.messageHandlers.bridge` on iOS. It returns `"web"` when neither
+ * is present.
+ *
+ * A `false` here is not a cosmetic problem — it silently routes a phone user
+ * into the *web* OAuth flow, which loads Google inside the app's own WebView,
+ * where Google refuses to authenticate (`disallowed_useragent`). The learner sees
+ * a browser-looking screen and never ends up signed in.
+ *
+ * So the bridge globals are checked directly as well as through the SDK. If the
+ * module and the runtime disagree for any reason, the runtime wins: the globals
+ * are the ground truth about where this code is executing.
+ */
 export async function isNativeShell(): Promise<boolean> {
-  const { Capacitor } = await import("@capacitor/core");
-  return Capacitor.isNativePlatform();
+  if (typeof window === "undefined") return false;
+
+  const globals = window as unknown as {
+    androidBridge?: unknown;
+    Capacitor?: { isNativePlatform?: () => boolean };
+    webkit?: { messageHandlers?: { bridge?: unknown } };
+  };
+
+  const bridgePresent = Boolean(
+    globals.androidBridge || globals.webkit?.messageHandlers?.bridge,
+  );
+
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    const reported = Capacitor.isNativePlatform();
+    if (reported || bridgePresent) return true;
+    return globals.Capacitor?.isNativePlatform?.() ?? false;
+  } catch {
+    // The module failed to load — the globals still answer the question.
+    return bridgePresent;
+  }
 }
 
 export function rememberPendingRequest(requestId: string): void {

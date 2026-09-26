@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
+import { SignOutForm } from "@/components/layout/sign-out-form";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/empty-state";
 import { Field, FormError, TextInput } from "@/components/ui/form";
@@ -65,11 +66,20 @@ export function SettingsWorkspace({
 }) {
   const [state, formAction] = useActionState(updatePlanAction, initialState);
 
+  /*
+   * `min-w-0` on both grid children is load-bearing, not decoration.
+   *
+   * A grid item defaults to `min-width: auto`, so it refuses to shrink below its
+   * content. The section tabs are `whitespace-nowrap`, so the *nav* forced the
+   * column wider than a 320px phone — and the card beside it inherited that
+   * width, which is why its text was clipped mid-word and it ran to the very
+   * edge with no right margin. This is the classic grid blowout.
+   */
   return (
-    <div className="grid gap-6 lg:grid-cols-[216px_minmax(0,1fr)] lg:gap-10">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[216px_minmax(0,1fr)] lg:gap-10">
       {/* ---- Section navigation ------------------------------------------- */}
-      <nav aria-label="Settings sections" className="lg:sticky lg:top-20 lg:self-start">
-        <ul className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+      <nav aria-label="Settings sections" className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+        <ul className="scroll-fade-x flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
           {SETTINGS_SECTIONS.map((section) => {
             const active = section.key === activeSection;
             return (
@@ -78,7 +88,7 @@ export function SettingsWorkspace({
                   href={`/${language.code}/settings?section=${section.key}`}
                   aria-current={active ? "page" : undefined}
                   className={
-                    "flex min-h-[40px] items-center gap-2.5 whitespace-nowrap rounded-[var(--radius)] px-3 py-2 text-sm font-medium transition-colors " +
+                    "press flex min-h-[40px] items-center gap-2.5 whitespace-nowrap rounded-[var(--radius)] px-3 py-2 text-sm font-medium " +
                     (active
                       ? "bg-accent-subtle text-accent"
                       : "text-secondary hover:bg-surface-hover hover:text-primary")
@@ -268,7 +278,7 @@ function PlanPane({
   const minutesMeta = DAILY_MINUTES_LABELS[learner.daily_minutes];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       {/* ---- Summary ------------------------------------------------------- */}
       <section className="rounded-[var(--radius-xl)] border border-line bg-surface-raised p-5 sm:p-7">
         <h2 className="text-lg font-semibold tracking-tight text-primary">
@@ -640,6 +650,23 @@ function AccountPane({ email }: { email: string }) {
         <ButtonLink href="/settings" variant="secondary" size="sm">
           Manage account and plan
         </ButtonLink>
+      </div>
+
+      {/*
+        Sign out lives here because it was previously only in the desktop rail —
+        which is `hidden lg:flex`, so on a phone or inside the Capacitor shell
+        there was **no way to sign out at all**. The Account pane is reachable on
+        every screen size, so this is the one place that fixes it everywhere.
+      */}
+      <div className="mt-6 border-t border-line pt-5">
+        <h3 className="text-sm font-medium text-primary">Sign out</h3>
+        <p className="mt-1 text-xs leading-relaxed text-secondary">
+          Ends this session on this device. Your plan, progress and review
+          schedule are kept.
+        </p>
+        <div className="mt-3">
+          <SignOutForm />
+        </div>
       </div>
     </Pane>
   );

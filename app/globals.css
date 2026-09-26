@@ -365,6 +365,62 @@
     border-radius: var(--radius-sm);
   }
 
+  /*
+   * The desktop rail's width.
+   *
+   * Driven by a `data-nav` attribute on `<html>`, set before first paint by
+   * `NAV_SCRIPT`, so the grid column is already correct when the page renders.
+   * React only ever flips the attribute — it never owns the width — which is
+   * what keeps a refresh from shifting the entire page sideways.
+   */
+  :root {
+    --nav-width: 5.25rem; /* 84px, the icon rail */
+    --nav-transition: 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html[data-nav="expanded"] {
+    --nav-width: 15rem; /* 240px, icon plus label */
+  }
+
+  /*
+   * The rail footer follows the rail without React knowing about it.
+   *
+   * `SidebarNav` is a client component and could branch on state, but this footer
+   * is rendered by the server layout around `SignOutForm`. Driving it from the
+   * same attribute means both halves of the rail agree, and neither has to be
+   * threaded through as a prop.
+   */
+  html[data-nav="expanded"] .rail-footer {
+    align-items: stretch;
+    padding-inline: 0.75rem;
+  }
+
+  /* Text that only has room to exist when the rail is expanded. */
+  html[data-nav="collapsed"] .rail-only-expanded {
+    display: none;
+  }
+
+  /*
+   * Touch behaviour.
+   *
+   * `-webkit-tap-highlight-color: transparent` removes the grey rectangle iOS
+   * and Android paint over anything tappable. In a browser that flash is a
+   * useful hint; in a standalone app it reads as a rendering artefact, and the
+   * `.press` utility below replaces it with deliberate feedback.
+   */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /*
+   * Rubber-banding past the top or bottom of the page reveals the browser
+   * chrome's background — and on a standalone app, a pull-to-refresh spinner.
+   * Neither belongs to an app that manages its own scrolling.
+   */
+  body {
+    overscroll-behavior-y: none;
+  }
+
   /* Content that only makes sense with motion. */
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -390,5 +446,71 @@
   /* Right-to-left languages (Arabic). Applied from `languages.direction`. */
   [dir="rtl"] .flip-x {
     transform: scaleX(-1);
+  }
+
+  /**
+   * Pressed feedback for anything tappable.
+   *
+   * `touch-action: manipulation` drops the ~300ms wait a browser inserts to see
+   * whether a tap is a double-tap-zoom. Pinch-zoom still works — this removes
+   * only the double-tap gesture, which is why it is safe for accessibility.
+   *
+   * The transform is intentionally tiny. A card that visibly squashes is worse
+   * than one that does not move at all; the point is to confirm the tap landed.
+   */
+  .press {
+    touch-action: manipulation;
+    transition:
+      transform 120ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 120ms ease,
+      background-color 120ms ease;
+  }
+
+  .press:active {
+    transform: scale(0.975);
+    opacity: 0.9;
+  }
+
+  /**
+   * Route-enter transition.
+   *
+   * Applied by `PageTransition` on every pathname change. It animates opacity
+   * and a few pixels of travel only — never layout — so it cannot shift a
+   * control out from under a finger that is already moving toward it.
+   *
+   * Suppressed entirely by the reduced-motion block above.
+   */
+  .page-enter {
+    animation: page-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 6px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  /**
+   * A horizontally scrollable strip that shows it can scroll.
+   *
+   * The settings section tabs scroll on a phone, but with nothing cut off at the
+   * edge a third tab simply looks broken. The mask fades the overflowing edge so
+   * the strip reads as continuing rather than truncated.
+   */
+  .scroll-fade-x {
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+
+  @media (min-width: 1024px) {
+    .scroll-fade-x {
+      mask-image: none;
+      -webkit-mask-image: none;
+    }
   }
 }

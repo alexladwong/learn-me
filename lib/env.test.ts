@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveAppOrigin } from "./env.ts";
+import { originFromForwardedHeaders, resolveAppOrigin } from "./env.ts";
 
 /**
  * Origin resolution.
@@ -94,4 +94,49 @@ test("the native custom scheme is never a web origin", () => {
     () => resolveAppOrigin("learnme://auth/callback", { deployed: true }),
     /must be an http\(s\) origin/,
   );
+});
+
+test("the OAuth callback origin comes from the request, not a constant", () => {
+  // Production: what `x-forwarded-*` carries on Vercel.
+  assert.equal(
+    originFromForwardedHeaders({ host: "learn-me-01.vercel.app", proto: "https" }),
+    "https://learn-me-01.vercel.app",
+  );
+  // Local development: no proxy, no proto header, plain HTTP.
+  assert.equal(
+    originFromForwardedHeaders({ host: "localhost:3000", proto: null }),
+    "http://localhost:3000",
+  );
+  assert.equal(
+    originFromForwardedHeaders({ host: "127.0.0.1:3000", proto: null }),
+    "http://127.0.0.1:3000",
+  );
+  // A future custom domain needs no code change.
+  assert.equal(
+    originFromForwardedHeaders({ host: "learnme.example.com", proto: "https" }),
+    "https://learnme.example.com",
+  );
+});
+
+test("a proxy chain is reduced to the client-facing host", () => {
+  // Proxies append; the first entry is the one the learner actually used.
+  assert.equal(
+    originFromForwardedHeaders({
+      host: "learn-me-01.vercel.app, internal.vercel.app",
+      proto: "https, http",
+    }),
+    "https://learn-me-01.vercel.app",
+  );
+});
+
+test("an unexpected proto header falls back to the host, not to nonsense", () => {
+  assert.equal(
+    originFromForwardedHeaders({ host: "learn-me-01.vercel.app", proto: "gopher" }),
+    "https://learn-me-01.vercel.app",
+  );
+});
+
+test("no host means no origin, so the caller falls back deliberately", () => {
+  assert.equal(originFromForwardedHeaders({ host: null, proto: "https" }), null);
+  assert.equal(originFromForwardedHeaders({ host: "  ", proto: "https" }), null);
 });

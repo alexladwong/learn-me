@@ -6,6 +6,7 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { cx } from "@/lib/cx";
 import { NAV_ITEMS } from "@/lib/constants";
 import { languageFromPath } from "@/lib/routing/language-path";
+import { useNavState } from "@/components/layout/nav-state";
 
 function hrefFor(lang: string, segment: string): string {
   return segment ? `/${lang}/${segment}` : `/${lang}`;
@@ -58,16 +59,28 @@ export function SidebarNav({
    * sent them back to the first one.
    */
   const current = languageFromPath(pathname, knownLanguages, lang);
+  const { state } = useNavState();
+  const expanded = state === "expanded";
 
   return (
-    <nav aria-label="Main" className="flex flex-col items-center gap-1 px-2 py-4">
+    <nav
+      aria-label="Main"
+      className={cx(
+        "flex min-h-0 flex-1 flex-col gap-1 py-4",
+        expanded ? "items-stretch px-3" : "items-center px-2",
+      )}
+    >
       <Link
         href={`/${current}`}
         aria-label={`Learn Me — ${languageName}`}
         title={languageName}
-        className="mb-3 flex size-10 shrink-0 items-center justify-center rounded-[var(--radius)] bg-accent text-on-accent transition-transform hover:scale-105"
+        className={cx(
+          "press mb-3 flex shrink-0 items-center gap-2.5 rounded-[var(--radius)] bg-accent text-on-accent",
+          expanded ? "h-10 px-2.5" : "size-10 justify-center",
+        )}
       >
         <Icon name="globe" size={19} />
+        {expanded ? <span className="truncate text-sm font-semibold">Learn Me</span> : null}
       </Link>
 
       {NAV_ITEMS.map((item) => {
@@ -81,14 +94,17 @@ export function SidebarNav({
             title={item.label}
             aria-current={active ? "page" : undefined}
             className={cx(
-              "flex w-full flex-col items-center gap-1 rounded-[var(--radius)] px-1 py-2.5 text-[11px] font-medium leading-none transition-colors",
+              "press flex w-full items-center rounded-[var(--radius)] font-medium",
+              expanded
+                ? "gap-3 px-3 py-2.5 text-sm"
+                : "flex-col gap-1 px-1 py-2.5 text-[11px] leading-none",
               active
                 ? "bg-accent-subtle text-accent"
                 : "text-muted hover:bg-surface-hover hover:text-primary",
             )}
           >
             <Icon name={item.icon as IconName} size={19} />
-            <span>{item.label}</span>
+            <span className={expanded ? "truncate" : undefined}>{item.label}</span>
           </Link>
         );
       })}
@@ -128,7 +144,7 @@ export function BottomNav({
                 href={hrefFor(current, item.segment)}
                 aria-current={active ? "page" : undefined}
                 className={cx(
-                  "flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
+                  "press flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
                   active ? "text-accent" : "text-muted hover:text-secondary",
                 )}
               >

@@ -11,10 +11,13 @@ function SignOutButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-[44px] w-full items-center gap-3 rounded-[var(--radius)] px-3 text-sm font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary disabled:opacity-60"
+      className="press flex min-h-[44px] w-full items-center justify-center gap-3 rounded-[var(--radius)] px-3 text-sm font-medium text-secondary hover:bg-surface-hover hover:text-primary disabled:opacity-60"
     >
       <Icon name="logout" size={18} />
-      {pending ? "Signing out…" : "Sign out"}
+      {/* Hidden at rail width, where an icon plus a label does not fit. */}
+      <span className="rail-only-expanded">
+        {pending ? "Signing out…" : "Sign out"}
+      </span>
     </button>
   );
 }

@@ -71,8 +71,42 @@ const host = (() => {
   }
 })();
 
-/** The InsForge backend, so API calls stay inside the shell rather than opening a browser. */
+/**
+ * Warn when a development origin is being synced.
+ *
+ * This exists because it already went wrong once: an iOS build was synced with
+ * the default `http://localhost:3000` and installed on a **physical iPhone**,
+ * where `localhost` is the phone itself. The result was a white screen with no
+ * error — the most expensive kind of failure to diagnose. A sync that is about
+ * to produce a simulator-only build should say so out loud.
+ */
+if (isLocalDev) {
+  console.warn(
+    `\n[capacitor] server.url is ${serverUrl}\n` +
+      `[capacitor] This works ONLY on the iOS Simulator (shares the Mac's network)\n` +
+      `[capacitor] or the Android emulator (where 10.0.2.2 is the host).\n` +
+      `[capacitor] A physical device will show a blank screen — localhost is the device.\n` +
+      `[capacitor] For a device build:\n` +
+      `[capacitor]   npm run cap:ios:device      (production HTTPS)\n` +
+      `[capacitor]   npm run cap:android:device  (your Mac's LAN IP)\n`,
+  );
+}
+
+/**
+ * The InsForge backend host.
+ *
+ * Read from the environment, but `npx cap sync` does **not** load `.env.local`,
+ * so this is usually empty during a sync and must not be relied on. It is kept
+ * because it costs nothing when present, and `CAPACITOR_BACKEND_HOST` is there
+ * for a CI sync that wants it explicit.
+ *
+ * It is not required for sign-in: the Google URL is opened with `Browser.open`
+ * in the system browser, and every `/api/...` call is same-origin with
+ * `server.url`, so the webview never navigates to InsForge itself.
+ */
 const backendHost = (() => {
+  const explicit = process.env.CAPACITOR_BACKEND_HOST?.trim();
+  if (explicit) return explicit;
   try {
     return new URL(process.env.NEXT_PUBLIC_INSFORGE_URL ?? "").host;
   } catch {

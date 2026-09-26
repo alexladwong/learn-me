@@ -9,10 +9,33 @@
 #
 # Add the production origin **and** its `/api/auth/callback` before deploying.
 allowed_redirect_urls = [
+  # --- Local development -------------------------------------------------
   "http://localhost:3000",
   "http://localhost:3000/api/auth/callback",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3000/api/auth/callback",
+  # --- Production web ----------------------------------------------------
+  #
+  # The exact callback, not just the origin: the backend compares this list
+  # verbatim, so an origin entry alone leaves the callback rejected with
+  # "…/api/auth/callback is not in the allowed redirect URLs".
+  #
+  # This list is additive on purpose. Production does not replace localhost —
+  # both are real environments, and the app derives which one to use from the
+  # incoming request rather than from a hardcoded constant.
+  "https://learn-me-01.vercel.app",
+  "https://learn-me-01.vercel.app/api/auth/callback",
+  # --- Vercel preview deployments ----------------------------------------
+  #
+  # A preview gets a random hostname per deployment (`learn-me-git-<branch>-
+  # <team>.vercel.app`), so allowlisting each one is not possible. Set
+  # `NEXT_PUBLIC_APP_URL=https://learn-me-01.vercel.app` in Vercel's *Preview*
+  # environment and previews will hand OAuth to this stable callback instead of
+  # their own — see `requestOriginFromHeaders()` in `lib/env.ts` for the order.
+  #
+  # Add a specific preview origin here only if you want that preview to keep
+  # users on its own hostname; the provider will otherwise reject the callback.
+  # --- Native shell -------------------------------------------------------
   # The Capacitor shell's OAuth return path.
   #
   # Google refuses OAuth inside an embedded WebView (`disallowed_useragent`), so

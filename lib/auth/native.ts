@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { createAuthActions } from "@insforge/sdk/ssr";
 import { getAdminClient } from "@/lib/insforge/admin";
-import { appUrl } from "@/lib/env";
 
 /**
  * The native shell's half of the OAuth flow.
@@ -28,6 +27,15 @@ import { appUrl } from "@/lib/env";
  * The client never receives the verifier, and no token of any kind is placed in
  * the deep-link URL.
  */
+
+/**
+ * The native OAuth return path.
+ *
+ * Fixed by definition: it is the app's own URL scheme, registered in
+ * `Info.plist` and the Android manifest, and it must never be replaced by a web
+ * origin — that substitution is what would break sign-in on a phone.
+ */
+export const NATIVE_CALLBACK_URL = "learnme://auth/callback";
 
 /** How long a pending sign-in stays valid. A slower one has failed. */
 export const NATIVE_REQUEST_TTL_MS = 10 * 60 * 1000;
@@ -71,11 +79,13 @@ export async function startNativeAuth(
   const auth = createAuthActions({ cookies: discardCookies });
 
   const { data, error } = await auth.signInWithOAuth("google", {
-    // Allowlisted verbatim in `insforge.toml`. InsForge appends `?insforge_code=`
-    // itself; the backend rejects any query string we add to `redirectTo`.
-    redirectTo: `${appUrl().replace(/\/$/, "")}`.startsWith("http")
-      ? "learnme://auth/callback"
-      : "learnme://auth/callback",
+    /*
+     * Allowlisted verbatim in `insforge.toml`, and deliberately NOT `appUrl()`:
+     * for native, the provider must return to the app's own scheme rather than to
+     * the web origin. InsForge appends `?insforge_code=` itself, and the backend
+     * rejects any query string we add to `redirectTo`.
+     */
+    redirectTo: NATIVE_CALLBACK_URL,
     skipBrowserRedirect: true,
   });
 

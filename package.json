@@ -16,11 +16,27 @@
     "verify:capture": "node --env-file=.env.local scripts/verify-capture.mjs",
     "verify:onboarding": "node --env-file=.env.local scripts/verify-onboarding.mjs",
     "verify:onboarding-ui": "node --env-file=.env.local scripts/verify-onboarding-ui.mjs",
+    "verify:render": "node --env-file=.env.local scripts/verify-render.mjs",
     "verify:pwa": "node scripts/verify-pwa.mjs",
     "verify:layout": "node scripts/verify-layout.mjs",
-    "reset:test-data": "node --env-file=.env.local scripts/reset-test-data.mjs"
+    "reset:test-data": "node --env-file=.env.local scripts/reset-test-data.mjs",
+    "shoot": "node --env-file=.env.local scripts/shoot.mjs",
+    "verify:switcher": "node --env-file=.env.local scripts/verify-language-switcher.mjs",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap sync ios && npx cap open ios",
+    "cap:android": "CAPACITOR_SERVER_URL=${CAPACITOR_SERVER_URL:-http://10.0.2.2:3000} npx cap sync android && npx cap open android",
+    "icons": "node scripts/generate-app-icons.mjs",
+    "verify:native": "node --env-file=.env.local scripts/verify-native-auth.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.3",
     "@insforge/sdk": "^1.5.2",
     "next": "16.3.6",
     "react": "19.2.8",
@@ -28,6 +44,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

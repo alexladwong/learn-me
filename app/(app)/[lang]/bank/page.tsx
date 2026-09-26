@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { CapabilityNotice, EmptyState } from "@/components/ui/empty-state";
 import { StatTile } from "@/components/ui/progress";
-import { BankFilters, BankList, parseBankFilter } from "./bank-view";
+import { BankFilters, BankList } from "./bank-view";
+import { parseBankFilter } from "./filter";
 import { loadLanguageContext } from "@/lib/db/context";
 import { getBankCounts, listBankEntries } from "@/lib/db/bank";
 import { getServerClient } from "@/lib/insforge/server-client";
@@ -32,6 +33,7 @@ export default async function BankPage({
   const query = await searchParams;
   await requireProfile();
   const { language } = await loadLanguageContext(lang);
+  // All for all 
   const client = await getServerClient();
 
   const filter = parseBankFilter(query);

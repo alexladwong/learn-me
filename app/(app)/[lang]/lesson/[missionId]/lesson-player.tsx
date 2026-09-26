@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/empty-state";
 import { ProgressBar } from "@/components/ui/progress";
-import { AnswerPanel, AudioButtons } from "@/components/learning/answer-panel";
+import { AnswerPanel } from "@/components/learning/answer-panel";
+import { AudioButton } from "@/components/learning/audio-button";
 import { cx } from "@/lib/cx";
 import { completeLesson } from "./actions";
 import type { Lesson, LessonStep, StepType } from "@/lib/db/lessons";
@@ -112,6 +113,7 @@ export function LessonPlayer({
         key={step.id}
         step={step}
         stepNumber={index + 1}
+        languageCode={languageCode}
         distractors={lesson.steps.map((candidate) => candidate.item.translationNatural)}
         onComplete={record}
       />
@@ -122,11 +124,14 @@ export function LessonPlayer({
 function StepView({
   step,
   stepNumber,
+  languageCode,
   distractors,
   onComplete,
 }: {
   step: LessonStep;
   stepNumber: number;
+  /** Needed by every step that offers audio, so the right voice is chosen. */
+  languageCode: string;
   distractors: string[];
   onComplete: (result: StepResult) => void;
 }) {
@@ -149,6 +154,7 @@ function StepView({
       {isTeach ? (
         <TeachStep
           item={item}
+          languageCode={languageCode}
           onContinue={() =>
             onComplete({
               itemId: item.id,
@@ -161,6 +167,7 @@ function StepView({
       ) : isSpeak ? (
         <SpeakStep
           item={item}
+          languageCode={languageCode}
           onContinue={(said) =>
             onComplete({
               itemId: item.id,
@@ -187,6 +194,7 @@ function StepView({
       ) : step.stepType === "listen" ? (
         <ListenStep
           item={item}
+          languageCode={languageCode}
           distractors={distractors}
           onComplete={(isCorrect, produced) =>
             onComplete({
@@ -216,6 +224,7 @@ function StepView({
       ) : (
         <RecogniseStep
           item={item}
+          languageCode={languageCode}
           distractors={distractors}
           onComplete={(isCorrect, produced) =>
             onComplete({
@@ -258,9 +267,11 @@ function defaultPrompt(stepType: StepType): string {
 
 function TeachStep({
   item,
+  languageCode,
   onContinue,
 }: {
   item: LessonStep["item"];
+  languageCode: string;
   onContinue: () => void;
 }) {
   return (
@@ -273,7 +284,12 @@ function TeachStep({
         ) : null}
       </div>
 
-      <AudioButtons normalUrl={item.audioNormalUrl} slowUrl={item.audioSlowUrl} />
+      <AudioButton
+        text={item.surface}
+        languageCode={languageCode}
+        normalUrl={item.audioNormalUrl}
+        slowUrl={item.audioSlowUrl}
+      />
 
       {item.grammarNote ? (
         <div className="rounded-[var(--radius)] border border-line bg-surface-sunken px-4 py-3">
@@ -375,10 +391,12 @@ function ChoiceQuestion({
 
 function RecogniseStep({
   item,
+  languageCode,
   distractors,
   onComplete,
 }: {
   item: LessonStep["item"];
+  languageCode: string;
   distractors: string[];
   onComplete: (isCorrect: boolean, produced: string) => void;
 }) {
@@ -389,7 +407,12 @@ function RecogniseStep({
 
   return (
     <>
-      <AudioButtons normalUrl={item.audioNormalUrl} slowUrl={item.audioSlowUrl} />
+      <AudioButton
+        text={item.surface}
+        languageCode={languageCode}
+        normalUrl={item.audioNormalUrl}
+        slowUrl={item.audioSlowUrl}
+      />
       <ChoiceQuestion
         surface={item.surface}
         answer={item.translationNatural}
@@ -403,10 +426,12 @@ function RecogniseStep({
 
 function ListenStep({
   item,
+  languageCode,
   distractors,
   onComplete,
 }: {
   item: LessonStep["item"];
+  languageCode: string;
   distractors: string[];
   onComplete: (isCorrect: boolean, produced: string) => void;
 }) {
@@ -414,44 +439,50 @@ function ListenStep({
     () => buildOptions(item.translationNatural, distractors),
     [item.translationNatural, distractors],
   );
-  const hasAudio = Boolean(item.audioNormalUrl);
+  // Audio-first: the text stays hidden until the learner has listened, which is
+  // the whole point of a listening exercise. The control is live either way,
+  // because a voice may be synthesised on the spot rather than served as a file.
+  const [revealed, setRevealed] = useState(false);
 
   return (
     <>
-      {hasAudio ? (
-        <>
-          <p className="text-sm text-secondary">Listen, then choose the meaning.</p>
-          <AudioButtons normalUrl={item.audioNormalUrl} slowUrl={item.audioSlowUrl} />
-        </>
+      <p className="text-sm text-secondary">
+        Listen, then choose what it means. The text stays hidden until you ask for it.
+      </p>
+
+      <AudioButton
+        text={item.surface}
+        languageCode={languageCode}
+        normalUrl={item.audioNormalUrl}
+        slowUrl={item.audioSlowUrl}
+      />
+
+      {revealed ? (
+        <p className="text-target text-xl font-semibold text-primary">{item.surface}</p>
       ) : (
-        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-line bg-surface-sunken px-4 py-3">
-          <span
-            aria-hidden="true"
-            className="mt-1.5 size-2 shrink-0 rounded-full bg-warning"
-          />
-          <div>
-            <p className="text-sm font-medium text-primary">
-              Audio has not been generated for this item
-            </p>
-            <p className="mt-0.5 text-sm text-secondary">
-              This is a listening exercise, but playing nothing would test nothing.
-              The written form is shown instead so the step still teaches something.
-            </p>
-          </div>
-        </div>
+        <Button variant="ghost" size="sm" onClick={() => setRevealed(true)}>
+          Show the text
+        </Button>
       )}
 
       <ChoiceQuestion
-        surface={item.surface}
+        surface={revealed ? item.surface : "🔊"}
         answer={item.translationNatural}
         options={options}
-        showSurface={!hasAudio}
+        showSurface={false}
         onResolved={onComplete}
       />
     </>
   );
 }
 
+/**
+ * Active recall: the learner produces the target-language sentence from its
+ * meaning.
+ *
+ * Deliberately audio-free. Hearing the sentence is exactly what this exercise is
+ * testing, so a speaker here would give away the answer.
+ */
 function RecallStep({
   item,
   onComplete,
@@ -526,6 +557,11 @@ function RecallStep({
   );
 }
 
+/**
+ * Sentence ordering: the learner rebuilds the sentence from its words.
+ *
+ * Also audio-free, for the same reason as recall — the words are the answer.
+ */
 function ArrangeStep({
   item,
   onComplete,
@@ -623,9 +659,11 @@ function ArrangeStep({
 
 function SpeakStep({
   item,
+  languageCode,
   onContinue,
 }: {
   item: LessonStep["item"];
+  languageCode: string;
   onContinue: (said: boolean) => void;
 }) {
   return (
@@ -649,7 +687,12 @@ function SpeakStep({
         <p className="mt-2 text-lg text-secondary">{item.translationNatural}</p>
       </div>
 
-      <AudioButtons normalUrl={item.audioNormalUrl} slowUrl={item.audioSlowUrl} />
+      <AudioButton
+        text={item.surface}
+        languageCode={languageCode}
+        normalUrl={item.audioNormalUrl}
+        slowUrl={item.audioSlowUrl}
+      />
 
       <div className="flex flex-col gap-2.5 border-t border-line pt-5 sm:flex-row">
         <Button size="lg" fullWidth onClick={() => onContinue(true)}>

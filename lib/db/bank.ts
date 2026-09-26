@@ -155,13 +155,59 @@ export async function listBankEntries(
   }
   if (favoritesOnly) query = query.eq("is_favorite", true);
   if (before) query = query.lt("saved_at", before);
-  if (search && search.trim()) {
-    // `ilike` over the target text and the translation covers the two ways a
-    // learner looks for something they saved.
-    const term = `%${search.trim().replace(/[%_]/g, "")}%`;
-    query = query.or(
-      `items.surface.ilike.${term},items.translation_natural.ilike.${term}`,
+  /**
+   * Search over the target text and its translation — the two ways a learner
+   * looks for something they saved.
+   *
+   * Pluralised as `or=(...)` this crashed every non-empty search with a 500.
+   * InsForge's query parser rejects `or()` when the column belongs to a joined
+   * table: `items.surface.ilike.%hola%` fails with "failed to parse logic tree",
+   * and so does every escaping variant — quoted, starred, or without wildcards.
+   * A single-column `.ilike("items.surface", …)` on the same embed works, so the
+   * limitation is `or()` specifically, not the join.
+   *
+   * So the two columns are searched separately and merged by id. The alternative
+   * — dropping one column — would silently stop finding translations, which is
+   * the more common thing to search for.
+   */
+  const trimmedSearch = search?.trim().replace(/[%_]/g, "") ?? "";
+  if (trimmedSearch) {
+    const term = `%${trimmedSearch}%`;
+    const columns = ["items.surface", "items.translation_natural"];
+
+    const results = await Promise.all(
+      columns.map((column) =>
+        client.database
+          .from("saved_items")
+          .select(BANK_COLUMNS)
+          // `!inner` makes the join exclusive, so filtering a joined column
+          // filters the parent rows rather than merely projecting them.
+          .eq("language_code", languageCode)
+          .is("archived_at", null)
+          .ilike(column, term)
+          .order("saved_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(Math.min(Math.max(limit, 1), 100)),
+      ),
     );
+
+    const failure = results.find((result) => result.error);
+    if (failure?.error) throw dbError("saved_items", failure.error);
+
+    // Merge by row id: an item matching both columns must appear once.
+    const byId = new Map<string, unknown>();
+    for (const result of results) {
+      for (const row of Array.isArray(result.data) ? result.data : []) {
+        if (isRecord(row) && typeof row.id === "string") byId.set(row.id, row);
+      }
+    }
+
+    const merged = [...byId.values()]
+      .map((row) => parseBankEntry(row))
+      .filter((entry): entry is BankEntry => entry !== null)
+      .sort((a, b) => (a.savedAt === b.savedAt ? (a.savedItemId < b.savedItemId ? 1 : -1) : a.savedAt < b.savedAt ? 1 : -1));
+
+    return attachMemory(client, merged);
   }
 
   const { data, error } = await query;
@@ -183,6 +229,19 @@ export async function listBankEntries(
     return entry ? [entry] : [];
   });
 
+  return attachMemory(client, entries);
+}
+
+/**
+ * Join each bank entry to its memory state.
+ *
+ * Shared by the plain list and the search path so the two cannot disagree about
+ * what a saved word's schedule is.
+ */
+async function attachMemory(
+  client: InsForgeClient,
+  entries: BankEntry[],
+): Promise<BankEntry[]> {
   const itemIds = entries.map((entry) => entry.itemId);
   if (itemIds.length === 0) return entries;
 

@@ -47,7 +47,15 @@ export async function loadLanguageContext(
   };
 }
 
-/** A neutral plan for a language the learner has not enrolled in. */
+/**
+ * A neutral plan for a language the learner has not enrolled in.
+ *
+ * Every field here has to read as "we do not know", not as a default the learner
+ * might mistake for their own answer. `cefr_goal` used to be `"A2"` and
+ * `daily_minutes` used to be `10`, which reached `/plan` and rendered as an
+ * aiming level and a daily budget the learner had never chosen — the reason that
+ * page could show a different goal from the rest of the product.
+ */
 function placeholderPlan(
   language: Language,
 ): LearnerLanguageWithMeta {
@@ -59,8 +67,11 @@ function placeholderPlan(
     is_primary: false,
     motivation: [],
     cefr_level: null,
-    cefr_goal: "A2",
-    daily_minutes: 10,
+    // Not `"A2"`. A preview of a language nobody has a plan for has no goal.
+    cefr_goal: null,
+    // Not `10`. `daily_minutes` is the learner's own answer; 0 states that they
+    // have not given one for this language.
+    daily_minutes: 0,
     skill_priorities: [],
     preferred_modes: [],
     started_at: new Date(0).toISOString(),

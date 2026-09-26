@@ -18,6 +18,11 @@ const paths = {
   flame: "M12 3s5 4.2 5 9a5 5 0 0 1-10 0c0-1.4.5-2.6 1.2-3.6.4 1 1.1 1.6 2 1.6 1.3 0 1.8-1.2 1.8-2.6 0-1.5-.6-3-.6-3s-.4-.7.6-1.4Z",
   cards: "M7.5 8.5h9a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Zm2-4h6a3.5 3.5 0 0 1 3.5 3.5M9 13h6M9 16h3.5",
   volume: "M11 5.5 6.75 9H4v6h2.75L11 18.5ZM15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10",
+  // Muted speaker: the honest state when no voice exists for a language.
+  volumeOff: "M11 5.5 6.75 9H4v6h2.75L11 18.5ZM16 9.5l5 5M21 9.5l-5 5",
+  pause: "M9.5 5.5v13M14.5 5.5v13",
+  // Slow playback. A tortoise, kept as a simple line drawing so it reads at 14px.
+  turtle: "M4 13.5a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v1H4ZM7 8.5l1.5-2M12 8.5V6M17 8.5 15.5 6.5M6.5 14.5v2M17.5 14.5v2",
   sparkle: "M12 3.5l1.7 4.3 4.3 1.7-4.3 1.7L12 15.5l-1.7-4.3L6 9.5l4.3-1.7ZM18.5 15l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9Z",
   chart: "M4 20h16M7 20V11M12 20V5M17 20v-6",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5l3.5 2",
@@ -26,6 +31,8 @@ const paths = {
   arrowLeft: "M19.5 12h-15M11 5.5 4.5 12l6.5 6.5",
   // Disclosure marker for the combobox and any future expandable control.
   chevronDown: "M6.5 9.5 12 15l5.5-5.5",
+  moon: "M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z",
+  sun: "M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
   lock: "M7 10.5V8a5 5 0 0 1 10 0v2.5M6 10.5h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z",
   globe: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3c-2.5 2.5-3.5 5.8-3.5 9s1 6.5 3.5 9c2.5-2.5 3.5-5.8 3.5-9s-1-6.5-3.5-9Z",
   settings:

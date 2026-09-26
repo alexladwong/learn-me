@@ -9,7 +9,11 @@ import { LanguagePicker } from "@/components/ui/language-picker";
 import { OnboardingProgress } from "@/components/learning/onboarding-progress";
 import { Field, FormError, TextInput } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { submitOnboarding, previousOnboardingStep, type OnboardingFormState } from "./actions";
+import {
+  submitOnboarding,
+  previousOnboardingStep,
+  type OnboardingFormState,
+} from "./actions";
 import { useOnboardingAnswers } from "./use-onboarding-answers";
 import {
   ONBOARDING_STEP_COUNT,
@@ -92,266 +96,179 @@ export function OnboardingWizard({
   const meta = STEP_TITLES[step];
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-14">
-        {/* Left: the question, why it is asked, and where we are. */}
-        <header className="lg:sticky lg:top-10 lg:self-start">
-          <OnboardingProgress step={step} />
-          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
-            {meta.title}
-          </h1>
-          <p className="mt-2.5 text-sm leading-relaxed text-secondary">{meta.subtitle}</p>
+    /*
+     * One pale mint panel holds the whole question, and the control sits on a
+     * crisp white card inside it. That is the composition the rest of the product
+     * uses — a quiet tinted field with raised work on top of it — and onboarding
+     * was the last screen still asking a question from inside a bordered box on a
+     * flat page.
+     *
+     * The outer `px` is a fix as well as styling: this route has no layout
+     * between it and `<body>`, so with `max-w-*` alone the question ran to the
+     * edges of a 320px screen.
+     */
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 lg:py-14">
+      <div className="rounded-[var(--radius-section)] bg-[var(--tint-mint)] p-4 sm:p-8 lg:p-12">
+        <div className="grid gap-7 lg:grid-cols-[minmax(0,36fr)_minmax(0,64fr)] lg:gap-14">
+          {/* Left: the question, why it is asked, and where we are. */}
+          <header className="lg:sticky lg:top-10 lg:self-start">
+            <OnboardingProgress step={step} />
+            <h1 className="mt-6 text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-primary sm:text-4xl">
+              {meta.title}
+            </h1>
+            <p className="mt-3.5 text-[0.9375rem] leading-relaxed text-secondary sm:text-base">
+              {meta.subtitle}
+            </p>
 
-          <CueForStep
-            step={step}
-            language={language}
-            motivations={answers.motivation}
-            skills={answers.skills}
-            minutes={answers.dailyMinutes}
-          />
-        </header>
+            <CueForStep
+              step={step}
+              language={language}
+              motivations={answers.motivation}
+              skills={answers.skills}
+              minutes={answers.dailyMinutes}
+            />
 
-        {/* Right: the control. */}
-        <div className="min-w-0">
-          <form
-            action={formAction}
-            className="flex flex-col gap-5 rounded-[var(--radius-lg)] border border-line bg-surface-raised p-5 sm:p-6"
-          >
-            {/*
-              The submitted target language, bound to the SAME state as the Step 1
-              cards — not to the `language` prop.
+            <p className="mt-8 hidden text-xs leading-relaxed text-muted lg:block">
+              You can change every one of these answers later in settings.
+            </p>
+          </header>
 
-              These were two separate sources of truth and they disagreed: this
-              field carried the URL's language (`language.code`, e.g. "es") while
-              picking a card set `answers.language` (e.g. "fr"). The radio group
-              submits under a different name (`languageChoice`), so nothing
-              corrected it. Choosing French on Step 1 therefore sent `es` and
-              would have built the plan for the wrong language entirely — a silent
-              wrong-language bug rather than a visible error.
-            */}
-            <input type="hidden" name="language" value={answers.language} />
-            <input type="hidden" name="step" value={step} />
+          {/* Right: the control. */}
+          <div className="min-w-0">
+            <form
+              action={formAction}
+              className="flex flex-col gap-6 rounded-[var(--radius-section)] bg-surface-raised p-4 shadow-[var(--shadow-float)] sm:p-7 lg:p-9"
+            >
+              {/*
+                The submitted target language, bound to the SAME state as the Step 1
+                cards — not to the `language` prop.
 
-            <FormError message={state.error} />
+                These were two separate sources of truth and they disagreed: this
+                field carried the URL's language (`language.code`, e.g. "es") while
+                picking a card set `answers.language` (e.g. "fr"). The radio group
+                submits under a different name (`languageChoice`), so nothing
+                corrected it. Choosing French on Step 1 therefore sent `es` and
+                would have built the plan for the wrong language entirely — a silent
+                wrong-language bug rather than a visible error.
+              */}
+              <input type="hidden" name="language" value={answers.language} />
+              <input type="hidden" name="step" value={step} />
 
-            {/* Step 1 — target language */}
-            <StepPanel active={step === 1}>
-              {languages.length > 1 ? (
-                <fieldset>
-                  <legend className="sr-only">Which language do you want to learn?</legend>
-                  <ul className="grid gap-3 sm:grid-cols-2">
-                    {languages.map((option) => {
-                      const selected = answers.language === option.code;
-                      return (
-                        <li key={option.code} className="relative">
-                          {/*
-                            Unnamed on purpose. This input exists only so the card
-                            is a native radio — arrow keys, grouping and the
-                            checked state come from the platform. The submitted
-                            value is the hidden `language` field above, bound to
-                            the same `answers.language`, so there is exactly one
-                            source of truth. Previously this carried
-                            `name="languageChoice"`, which the server strips as an
-                            unknown key, leaving the hidden field to submit a
-                            different language than the one shown as selected.
-                          */}
-                          <input
-                            type="radio"
-                            id={`language-${option.code}`}
-                            value={option.code}
-                            checked={selected}
-                            onChange={() => set("language", option.code)}
-                            className="peer sr-only"
-                          />
-                          <label
-                            htmlFor={`language-${option.code}`}
-                            className="block cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]"
-                          >
-                            <LanguageCard language={option} selected={selected} />
-                          </label>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </fieldset>
-              ) : (
-                <LanguageCard language={language} selected />
-              )}
-            </StepPanel>
+              <FormError message={state.error} />
 
-            {/* Step 2 — first language */}
-            <StepPanel active={step === 2}>
-              <LanguagePicker
-                id="nativeLanguage"
-                name="nativeLanguage"
-                label="Your first language"
-                hint="Search by English or native name."
-                value={answers.nativeLanguage}
-                onChange={(code) => set("nativeLanguage", code)}
-                languages={nativeLanguages}
-              />
-            </StepPanel>
+              {/* Step 1 — target language */}
+              <StepPanel active={step === 1}>
+                {languages.length > 1 ? (
+                  <fieldset>
+                    <legend className="sr-only">
+                      Which language do you want to learn?
+                    </legend>
+                    <ul className="grid gap-3">
+                      {languages.map((option) => {
+                        const selected = answers.language === option.code;
+                        return (
+                          <li key={option.code} className="relative">
+                            {/*
+                              Unnamed on purpose. This input exists only so the card
+                              is a native radio — arrow keys, grouping and the
+                              checked state come from the platform. The submitted
+                              value is the hidden `language` field above, bound to
+                              the same `answers.language`, so there is exactly one
+                              source of truth. Previously this carried
+                              `name="languageChoice"`, which the server strips as an
+                              unknown key, leaving the hidden field to submit a
+                              different language than the one shown as selected.
+                            */}
+                            <input
+                              type="radio"
+                              id={`language-${option.code}`}
+                              value={option.code}
+                              checked={selected}
+                              onChange={() => set("language", option.code)}
+                              className="peer sr-only"
+                            />
+                            <label
+                              htmlFor={`language-${option.code}`}
+                              className="block cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]"
+                            >
+                              <LanguageCard
+                                language={option}
+                                selected={selected}
+                                layout="row"
+                              />
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </fieldset>
+                ) : (
+                  <LanguageCard language={language} selected />
+                )}
+              </StepPanel>
 
-            {/* Step 3 — motivation */}
-            <StepPanel active={step === 3}>
-              <fieldset>
-                <legend className="mb-2 text-sm font-medium text-primary">
-                  Choose everything that applies
-                </legend>
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  {MOTIVATIONS.map((motivation) => {
-                    const checked = answers.motivation.includes(motivation);
-                    return (
-                      <div key={motivation} className="relative">
-                        <input
-                          type="checkbox"
-                          id={`motivation-${motivation}`}
-                          name="motivation"
-                          value={motivation}
-                          checked={checked}
-                          onChange={(event) =>
-                            toggle("motivation", motivation, event.target.checked)
-                          }
-                          className="peer sr-only"
-                        />
-                        <label
-                          htmlFor={`motivation-${motivation}`}
-                          className={cx(
-                            "flex min-h-[44px] cursor-pointer items-center gap-3 rounded-[var(--radius)] border px-3.5 py-3 transition-colors",
-                            checked
-                              ? "border-accent bg-accent-subtle"
-                              : "border-line-strong bg-surface-raised hover:bg-surface-hover",
-                            "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]",
-                          )}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={cx(
-                              "flex size-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
-                              checked
-                                ? "border-accent bg-accent text-on-accent"
-                                : "border-line-strong",
-                            )}
-                          >
-                            {checked ? <Icon name="check" size={10} /> : null}
-                          </span>
-                          <span className="min-w-0 text-sm font-medium text-primary">
-                            {MOTIVATION_LABELS[motivation as Motivation]}
-                          </span>
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            </StepPanel>
-
-            {/* Step 4 — level and goal */}
-            <StepPanel active={step === 4}>
-              <div className="flex flex-col gap-6">
-                <ChoiceGroup
-                  name="level"
-                  legend="Where are you now?"
-                  options={LEVEL_CHOICES}
-                  value={answers.level as (typeof LEVEL_CHOICES)[number]["value"]}
-                  onChange={(value) => set("level", value)}
+              {/* Step 2 — first language */}
+              <StepPanel active={step === 2}>
+                <LanguagePicker
+                  id="nativeLanguage"
+                  name="nativeLanguage"
+                  label="Your first language"
+                  hint="Search by English or native name."
+                  value={answers.nativeLanguage}
+                  onChange={(code) => set("nativeLanguage", code)}
+                  languages={nativeLanguages}
                 />
-                <ChoiceGroup
-                  name="goal"
-                  legend="What are you aiming for?"
-                  options={GOAL_CHOICES}
-                  value={answers.goal as (typeof GOAL_CHOICES)[number]["value"]}
-                  onChange={(value) => set("goal", value)}
-                />
-              </div>
-            </StepPanel>
+              </StepPanel>
 
-            {/* Step 5 — daily budget */}
-            <StepPanel active={step === 5}>
-              <fieldset>
-                <legend className="mb-2 text-sm font-medium text-primary">
-                  How long, on a normal day?
-                </legend>
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  {DAILY_MINUTES_OPTIONS.map((minutes) => {
-                    const checked = answers.dailyMinutes === String(minutes);
-                    const meta = DAILY_MINUTES_LABELS[minutes];
-                    return (
-                      <div key={minutes} className="relative">
-                        <input
-                          type="radio"
-                          id={`dailyMinutes-${minutes}`}
-                          name="dailyMinutes"
-                          value={String(minutes)}
-                          checked={checked}
-                          onChange={() => set("dailyMinutes", String(minutes))}
-                          className="peer sr-only"
-                        />
-                        <label
-                          htmlFor={`dailyMinutes-${minutes}`}
-                          className={cx(
-                            "flex min-h-[44px] cursor-pointer flex-col gap-1 rounded-[var(--radius)] border p-3.5 transition-colors",
-                            checked
-                              ? "border-accent bg-accent-subtle"
-                              : "border-line-strong bg-surface-raised hover:bg-surface-hover",
-                            "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]",
-                          )}
-                        >
-                          <span className="flex items-baseline justify-between gap-2">
-                            <span className="text-base font-semibold tabular-nums text-primary">
-                              {minutes} min
-                            </span>
-                            <span className="text-xs font-medium uppercase tracking-wide text-accent">
-                              {meta.label}
-                            </span>
-                          </span>
-                          <span className="text-xs text-secondary">{meta.description}</span>
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            </StepPanel>
-
-            {/* Step 6 — skill priorities, name, timezone */}
-            <StepPanel active={isLast}>
-              <div className="flex flex-col gap-6">
+              {/* Step 3 — motivation */}
+              <StepPanel active={step === 3}>
                 <fieldset>
-                  <legend className="mb-2 text-sm font-medium text-primary">
-                    Choose at least one
+                  <legend className="mb-3 text-sm font-medium text-primary">
+                    Choose everything that applies
                   </legend>
                   <div className="grid gap-2.5 sm:grid-cols-2">
-                    {SKILLS.map((skill) => {
-                      const checked = answers.skills.includes(skill);
+                    {MOTIVATIONS.map((motivation) => {
+                      const checked = answers.motivation.includes(motivation);
                       return (
-                        <div key={skill} className="relative">
+                        <div key={motivation} className="relative">
                           <input
                             type="checkbox"
-                            id={`skill-${skill}`}
-                            name="skills"
-                            value={skill}
+                            id={`motivation-${motivation}`}
+                            name="motivation"
+                            value={motivation}
                             checked={checked}
                             onChange={(event) =>
-                              toggle("skills", skill, event.target.checked)
+                              toggle(
+                                "motivation",
+                                motivation,
+                                event.target.checked,
+                              )
                             }
                             className="peer sr-only"
                           />
                           <label
-                            htmlFor={`skill-${skill}`}
+                            htmlFor={`motivation-${motivation}`}
                             className={cx(
-                              "flex min-h-[44px] cursor-pointer flex-col gap-0.5 rounded-[var(--radius)] border p-3.5 transition-colors",
+                              "flex min-h-[44px] cursor-pointer items-center gap-3 rounded-[var(--radius-xl)] border px-4 py-3.5 transition-colors",
                               checked
                                 ? "border-accent bg-accent-subtle"
-                                : "border-line-strong bg-surface-raised hover:bg-surface-hover",
+                                : "border-line bg-surface hover:bg-surface-hover",
                               "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]",
                             )}
                           >
-                            <span className="text-sm font-medium text-primary">
-                              {SKILL_LABELS[skill as Skill]}
+                            <span
+                              aria-hidden="true"
+                              className={cx(
+                                "flex size-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
+                                checked
+                                  ? "border-accent bg-accent text-on-accent"
+                                  : "border-line-strong",
+                              )}
+                            >
+                              {checked ? <Icon name="check" size={10} /> : null}
                             </span>
-                            <span className="text-xs text-secondary">
-                              {SKILL_DESCRIPTIONS[skill as Skill]}
+                            <span className="min-w-0 text-sm font-medium text-primary">
+                              {MOTIVATION_LABELS[motivation as Motivation]}
                             </span>
                           </label>
                         </div>
@@ -359,65 +276,199 @@ export function OnboardingWizard({
                     })}
                   </div>
                 </fieldset>
+              </StepPanel>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="What should we call you?" htmlFor="displayName">
-                    <TextInput
-                      id="displayName"
-                      name="displayName"
-                      type="text"
-                      value={answers.displayName}
-                      onChange={(event) => set("displayName", event.target.value)}
-                      placeholder="Alex"
-                      autoComplete="given-name"
-                    />
-                  </Field>
-                  <Field
-                    label="Time zone"
-                    htmlFor="timezone"
-                    hint="Detected from your browser. It decides when your day rolls over."
-                  >
-                    <TextInput
-                      id="timezone"
-                      name="timezone"
-                      type="text"
-                      value={answers.timezone}
-                      onChange={(event) => set("timezone", event.target.value)}
-                      placeholder="Europe/London"
-                      autoComplete="off"
-                    />
-                  </Field>
+              {/* Step 4 — level and goal */}
+              <StepPanel active={step === 4}>
+                <div className="flex flex-col gap-6">
+                  <ChoiceGroup
+                    name="level"
+                    legend="Where are you now?"
+                    options={LEVEL_CHOICES}
+                    value={
+                      answers.level as (typeof LEVEL_CHOICES)[number]["value"]
+                    }
+                    onChange={(value) => set("level", value)}
+                  />
+                  <ChoiceGroup
+                    name="goal"
+                    legend="What are you aiming for?"
+                    options={GOAL_CHOICES}
+                    value={
+                      answers.goal as (typeof GOAL_CHOICES)[number]["value"]
+                    }
+                    onChange={(value) => set("goal", value)}
+                  />
                 </div>
-              </div>
-            </StepPanel>
+              </StepPanel>
 
-            <div className="flex items-center justify-between gap-3 border-t border-line pt-5">
-              {step > 1 ? (
-                <button
-                  type="submit"
-                  formAction={previousOnboardingStep}
-                  formNoValidate
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius)] px-3 text-sm font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+              {/* Step 5 — daily budget */}
+              <StepPanel active={step === 5}>
+                <fieldset>
+                  <legend className="mb-3 text-sm font-medium text-primary">
+                    How long, on a normal day?
+                  </legend>
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    {DAILY_MINUTES_OPTIONS.map((minutes) => {
+                      const checked = answers.dailyMinutes === String(minutes);
+                      const meta = DAILY_MINUTES_LABELS[minutes];
+                      return (
+                        <div key={minutes} className="relative">
+                          <input
+                            type="radio"
+                            id={`dailyMinutes-${minutes}`}
+                            name="dailyMinutes"
+                            value={String(minutes)}
+                            checked={checked}
+                            onChange={() =>
+                              set("dailyMinutes", String(minutes))
+                            }
+                            className="peer sr-only"
+                          />
+                          <label
+                            htmlFor={`dailyMinutes-${minutes}`}
+                            className={cx(
+                              "flex min-h-[44px] cursor-pointer flex-col gap-1 rounded-[var(--radius-xl)] border p-4 transition-colors",
+                              checked
+                                ? "border-accent bg-accent-subtle"
+                                : "border-line bg-surface hover:bg-surface-hover",
+                              "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]",
+                            )}
+                          >
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="text-base font-semibold tabular-nums text-primary">
+                                {minutes} min
+                              </span>
+                              <span className="text-xs font-medium uppercase tracking-wide text-accent">
+                                {meta.label}
+                              </span>
+                            </span>
+                            <span className="text-xs text-secondary">
+                              {meta.description}
+                            </span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              </StepPanel>
+
+              {/* Step 6 — skill priorities, name, timezone */}
+              <StepPanel active={isLast}>
+                <div className="flex flex-col gap-6">
+                  <fieldset>
+                    <legend className="mb-3 text-sm font-medium text-primary">
+                      Choose at least one
+                    </legend>
+                    <div className="grid gap-2.5 sm:grid-cols-2">
+                      {SKILLS.map((skill) => {
+                        const checked = answers.skills.includes(skill);
+                        return (
+                          <div key={skill} className="relative">
+                            <input
+                              type="checkbox"
+                              id={`skill-${skill}`}
+                              name="skills"
+                              value={skill}
+                              checked={checked}
+                              onChange={(event) =>
+                                toggle("skills", skill, event.target.checked)
+                              }
+                              className="peer sr-only"
+                            />
+                            <label
+                              htmlFor={`skill-${skill}`}
+                              className={cx(
+                                "flex min-h-[44px] cursor-pointer flex-col gap-0.5 rounded-[var(--radius-xl)] border p-4 transition-colors",
+                                checked
+                                  ? "border-accent bg-accent-subtle"
+                                  : "border-line bg-surface hover:bg-surface-hover",
+                                "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]",
+                              )}
+                            >
+                              <span className="text-sm font-medium text-primary">
+                                {SKILL_LABELS[skill as Skill]}
+                              </span>
+                              <span className="text-xs text-secondary">
+                                {SKILL_DESCRIPTIONS[skill as Skill]}
+                              </span>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field
+                      label="What should we call you?"
+                      htmlFor="displayName"
+                    >
+                      <TextInput
+                        id="displayName"
+                        name="displayName"
+                        type="text"
+                        value={answers.displayName}
+                        onChange={(event) =>
+                          set("displayName", event.target.value)
+                        }
+                        placeholder="Alex"
+                        autoComplete="given-name"
+                      />
+                    </Field>
+                    <Field
+                      label="Time zone"
+                      htmlFor="timezone"
+                      hint="Detected from your browser. It decides when your day rolls over."
+                    >
+                      <TextInput
+                        id="timezone"
+                        name="timezone"
+                        type="text"
+                        value={answers.timezone}
+                        onChange={(event) =>
+                          set("timezone", event.target.value)
+                        }
+                        placeholder="Europe/London"
+                        autoComplete="off"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </StepPanel>
+
+              <div className="flex items-center justify-between gap-3 border-t border-line pt-6">
+                {step > 1 ? (
+                  <button
+                    type="submit"
+                    formAction={previousOnboardingStep}
+                    formNoValidate
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius)] px-3 text-sm font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+                  >
+                    <Icon name="arrowLeft" size={16} />
+                    Back
+                  </button>
+                ) : (
+                  <span />
+                )}
+
+                <SubmitButton
+                  pendingLabel={isLast ? "Building your plan…" : "Saving…"}
+                  size="lg"
                 >
-                  <Icon name="arrowLeft" size={16} />
-                  Back
-                </button>
-              ) : (
-                <span />
-              )}
+                  {isLast ? "Create my plan" : "Continue"}
+                </SubmitButton>
+              </div>
+            </form>
 
-              <SubmitButton
-                pendingLabel={isLast ? "Building your plan…" : "Saving…"}
-                size="lg"
-              >
-                {isLast ? "Create my plan" : "Continue"}
-              </SubmitButton>
-            </div>
-          </form>
-
-          <p className="mt-4 text-center text-xs text-muted lg:text-left">
-            You can change every one of these answers later in settings.
-          </p>
+            {/* The note lives in the left column on desktop, where there is room
+              for it beside the question; on a phone it belongs under the control
+              the learner has just used. It is never shown twice. */}
+            <p className="mt-4 text-center text-xs leading-relaxed text-muted lg:hidden">
+              You can change every one of these answers later in settings.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -457,7 +508,10 @@ function CueForStep({
       if (motivations.includes("work") || motivations.includes("business")) {
         parts.push("meetings, email and small talk with colleagues");
       }
-      if (motivations.includes("university") || motivations.includes("school")) {
+      if (
+        motivations.includes("university") ||
+        motivations.includes("school")
+      ) {
         parts.push("lectures, reading and academic writing");
       }
       if (motivations.includes("relationships")) {
@@ -499,11 +553,14 @@ function CueForStep({
   if (!cue) return null;
 
   return (
-    <div className="mt-5 flex gap-2.5 rounded-[var(--radius)] border border-line bg-surface-sunken p-3.5">
+    <div className="mt-6 flex gap-3 rounded-[var(--radius-xl)] border border-line bg-surface-raised p-4">
       <span aria-hidden="true" className="mt-0.5 shrink-0 text-accent">
         <Icon name="sparkle" size={15} />
       </span>
-      <p className="text-xs leading-relaxed text-secondary" role="status">
+      <p
+        className="text-[0.8125rem] leading-relaxed text-secondary"
+        role="status"
+      >
         {cue}
       </p>
     </div>
@@ -518,7 +575,13 @@ function CueForStep({
  * No card wrapper: the form itself is the surface now, so a card inside a card
  * was producing the "box inside a box" look this pass removes.
  */
-function StepPanel({ active, children }: { active: boolean; children: React.ReactNode }) {
+function StepPanel({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div hidden={!active} className="flex flex-col gap-5">
       {children}

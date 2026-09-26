@@ -61,7 +61,7 @@ export function ProgressBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
-        className={cx("w-full overflow-hidden rounded-full bg-surface-sunken", heights[size])}
+        className={cx("w-full overflow-hidden rounded-full bg-track", heights[size])}
       >
         <div
           className={cx("h-full rounded-full transition-[width]", tones[tone])}
@@ -118,7 +118,7 @@ export function ProgressRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="var(--surface-sunken)"
+          stroke="var(--track)"
           strokeWidth={stroke}
         />
         <circle

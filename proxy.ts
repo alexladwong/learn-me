@@ -95,6 +95,13 @@ export const config = {
    * offline mode never worked.
    */
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|api/auth/refresh|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|woff2?)$).*)",
+    // `api/auth/callback` is excluded here as well as being public: it must reach
+    // its route handler untouched, since that handler is what exchanges the OAuth
+    // code and writes the session cookies.
+    //
+    // `/.well-known/…` is chrome-devtools probing for a workspace mapping. It is
+    // not a page, no learner can have a session when it fires, and gating it meant
+    // every devtools session produced `GET /sign-in?next=%2F.well-known%2F…`.
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.well-known|api/auth/refresh|api/auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|woff2?)$).*)",
   ],
 };

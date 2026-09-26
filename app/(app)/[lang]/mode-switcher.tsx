@@ -15,9 +15,16 @@ import { LEARNING_MODES, LEARNING_MODE_META, type LearningMode } from "@/lib/typ
 export function ModeSwitcher({
   languageCode,
   active,
+  minutes,
 }: {
   languageCode: string;
   active: LearningMode;
+  /**
+   * The length of each mode, from `minutesForMode(mode, learner.daily_minutes)`.
+   * Passed in rather than read from a constant so the chip and the composed
+   * session cannot disagree.
+   */
+  minutes: Record<LearningMode, number | null>;
 }) {
   const router = useRouter();
 
@@ -51,8 +58,8 @@ export function ModeSwitcher({
             )}
           >
             {meta.label}
-            {meta.minutes ? (
-              <span className="text-xs tabular-nums opacity-70">{meta.minutes}m</span>
+            {minutes[mode] ? (
+              <span className="text-xs tabular-nums opacity-70">{minutes[mode]}m</span>
             ) : null}
           </button>
         );

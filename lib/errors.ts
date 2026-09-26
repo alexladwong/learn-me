@@ -46,6 +46,15 @@ const INTERNAL_PATTERNS: RegExp[] = [
   /\b(TypeError|ReferenceError|SyntaxError)\b/,
   /is not a function/,
   /Cannot read propert(y|ies) of (undefined|null)/,
+  /*
+   * Browser network shapes. These are what a rejected `fetch` actually says, and
+   * none of them is a sentence anyone wrote for a learner — "Failed to fetch"
+   * reached the language switcher's error line before this.
+   */
+  /^failed to fetch$/i,
+  /^networkerror/i,
+  /^load failed$/i,
+  /\bthe (internet connection|network connection) appears to be offline\b/i,
 ];
 
 /**

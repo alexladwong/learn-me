@@ -13,6 +13,17 @@ allowed_redirect_urls = [
   "http://localhost:3000/api/auth/callback",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3000/api/auth/callback",
+  # The Capacitor shell's OAuth return path.
+  #
+  # Google refuses OAuth inside an embedded WebView (`disallowed_useragent`), so
+  # the shell opens the flow in the system browser. The backend then redirects to
+  # this custom scheme, the OS hands the URL to the app, and the app exchanges
+  # `insforge_code` server-side — which is why no session token ever appears in a
+  # deep link.
+  #
+  # Compared verbatim like every other entry, so it must carry the exact path and
+  # must not carry a query string.
+  "learnme://auth/callback",
 ]
 # Email verification is off while SMTP is unconfigured: with it on, email
 # signups cannot complete because the verification code is never delivered.

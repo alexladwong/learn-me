@@ -150,7 +150,18 @@ export default function LayoutProbePage() {
             Today&apos;s French
           </h1>
           <div className="mt-3">
-            <ModeSwitcher languageCode="fr" active="study" />
+            <ModeSwitcher
+              languageCode="fr"
+              active="study"
+              minutes={{
+                quick: 5,
+                commute: 15,
+                study: 20,
+                speak: 10,
+                review: null,
+                explore: null,
+              }}
+            />
           </div>
         </div>
 

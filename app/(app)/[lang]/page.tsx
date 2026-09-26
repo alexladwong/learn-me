@@ -8,7 +8,11 @@ import { ProgressBar, ProgressRing, StatTile } from "@/components/ui/progress";
 import { loadLanguageContext } from "@/lib/db/context";
 import { getUserStats, refreshDueCount } from "@/lib/db/learner";
 import { getWeeklySummary, listTracksWithProgress } from "@/lib/db/progress";
-import { composeTodaySession, recommendNext } from "@/lib/learning/session";
+import {
+  composeTodaySession,
+  minutesForMode,
+  recommendNext,
+} from "@/lib/learning/session";
 import { listLessons, pickNextLesson, startingLevel } from "@/lib/db/lessons";
 import { listMissionCompletions } from "@/lib/db/missions";
 import { listConfusionPatterns } from "@/lib/db/confusions";
@@ -23,6 +27,7 @@ import {
   type Motivation,
 } from "@/lib/types";
 import { ModeSwitcher } from "./mode-switcher";
+import { LearningPulse, SpeechWave, type PulseItem } from "@/components/learning/learning-pulse";
 
 export async function generateMetadata({
   params,
@@ -78,7 +83,6 @@ export default async function DashboardPage({
   // panels. Sequential because the session depends on the due count.
   await refreshDueCount(client, null);
   const stats = await getUserStats(client, language.code);
-  const session = await composeTodaySession(client, learner, mode);
 
   const [weekly, tracks, lessons, completions, patterns] = await Promise.all([
     getWeeklySummary(client, language.code, 7),
@@ -94,6 +98,13 @@ export default async function DashboardPage({
     startingLevel(learner.cefr_level, learner.cefr_goal),
   );
   const nextLesson = next?.lesson ?? null;
+
+  // The next mission is resolved first so the session can state its real length.
+  // The composer used to assume eight minutes for every lesson, which is a
+  // duration no authored mission had claimed.
+  const session = await composeTodaySession(client, learner, mode, {
+    lessonMinutes: nextLesson?.estimatedMinutes ?? null,
+  });
 
   const recommendation = recommendNext(learner, stats, weekly);
 
@@ -121,145 +132,173 @@ export default async function DashboardPage({
       : "Open the learning path";
 
   const currentMode = LEARNING_MODE_META[mode];
+
+  /*
+   * One length per mode, from the same function that composes the session. The
+   * chips used to read hardcoded constants (`study: 30`) while the session used
+   * the learner's own budget, so a twenty-minute learner was shown "Study 30m".
+   */
+  const modeMinutes = Object.fromEntries(
+    LEARNING_MODES.map((entry) => [entry, minutesForMode(entry, learner.daily_minutes)]),
+  ) as Record<LearningMode, number | null>;
   const goalProgress =
     session.goalMinutes > 0 ? Math.min(1, session.totalMinutes / session.goalMinutes) : 0;
 
   const hasAnyActivity = Boolean(stats && stats.total_reviews > 0);
   const primaryTrack = tracks[0];
 
+  /** The pulse strip: one band, real values, em dash where nothing is measured. */
+  const pulse: PulseItem[] = [
+    {
+      label: "Streak",
+      value: stats && stats.streak_current > 0 ? stats.streak_current : null,
+      icon: "flame",
+      hint: stats?.streak_current ? "days in a row" : "start today",
+    },
+    {
+      label: "Words",
+      value: stats && stats.words_learned > 0 ? stats.words_learned : null,
+      icon: "plus",
+      hint: "in your bank",
+    },
+    {
+      label: "Sentences",
+      value: stats && stats.sentences_mastered > 0 ? stats.sentences_mastered : null,
+      icon: "book",
+      hint: "mastered",
+    },
+    {
+      label: "Reviews",
+      value: stats && stats.total_reviews > 0 ? stats.total_reviews : null,
+      icon: "cards",
+      hint: "all time",
+      trend: weekly && weekly.reviews > 0 ? Math.min(1, weekly.reviews / 50) : null,
+    },
+    {
+      label: "Listening",
+      value: stats && stats.listening_seconds > 0 ? formatMinutes(stats.listening_seconds) : null,
+      icon: "volume",
+      hint: "minutes",
+    },
+    {
+      label: "Speaking",
+      value: stats && stats.speaking_seconds > 0 ? formatMinutes(stats.speaking_seconds) : null,
+      icon: "speak",
+      hint: "minutes",
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
-      {/* ---- Today's learning: the one thing that matters ------------------ */}
-      <section aria-labelledby="today-heading">
-        <p className="text-sm text-secondary">
-          {greeting}, {displayName}
-        </p>
-        <h1 id="today-heading" className="mt-1 text-2xl font-semibold tracking-tight text-primary">
-          Today&apos;s {language.name_en}
-        </h1>
-
-        <div className="mt-3">
-          <ModeSwitcher languageCode={language.code} active={mode} />
+      {/* ---- Greeting ------------------------------------------------------ */}
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-primary sm:text-3xl">
+            {greeting}, {displayName}
+          </h1>
+          <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-secondary">
+            <span className="font-medium text-primary">{language.name_native}</span>
+            <span aria-hidden="true" className="text-muted">·</span>
+            <span>
+              {learner.cefr_level ? `${learner.cefr_level} → ${learner.cefr_goal}` : "Level not set"}
+            </span>
+            <span aria-hidden="true" className="text-muted">·</span>
+            <span>{learner.daily_minutes} min a day</span>
+          </p>
         </div>
+        {stats?.streak_current ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-secondary">
+            <Icon name="flame" size={13} />
+            {stats.streak_current}-day streak
+          </span>
+        ) : null}
+      </header>
 
-        <Card tone="raised" className="mt-4">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <ProgressRing
-              value={goalProgress}
-              primary={
-                session.totalMinutes > 0 ? `${session.totalMinutes}` : "—"
-              }
-              secondary={
-                session.totalMinutes > 0
-                  ? `of ${session.goalMinutes} min`
-                  : "nothing queued"
-              }
-              label={`Daily goal: ${session.totalMinutes} of ${session.goalMinutes} minutes planned`}
-            />
+      {/* ---- Today's learning: the hero composition ------------------------ */}
+      <section
+        aria-labelledby="today-heading"
+        className="relative overflow-hidden rounded-[var(--radius-section)] bg-[var(--tint-mint)] px-5 py-7 sm:px-10 sm:py-10"
+      >
+        {/* The one piece of visual language on the page: a speech shape, tied to
+            what the product is about rather than being abstract decoration. */}
+        <SpeechWave
+          bars={34}
+          className="pointer-events-none absolute inset-x-6 bottom-6 h-10 text-accent sm:inset-x-10"
+        />
 
-            <div className="min-w-0 flex-1">
-              {session.items.length === 0 ? (
-                <EmptyState
-                  title="Nothing is queued yet"
-                  description="There are no cards due and no published lessons for this language yet. Add a language with content, or come back once reviews are scheduled."
-                  action={
-                    <ButtonLink href="/languages" variant="secondary" size="sm">
-                      Choose a language
-                    </ButtonLink>
-                  }
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-12">
+          <ProgressRing
+            value={goalProgress}
+            primary={session.totalMinutes > 0 ? `${session.totalMinutes}` : "—"}
+            secondary={
+              session.totalMinutes > 0 ? `of ${session.goalMinutes} min` : "nothing queued"
+            }
+            label={`Daily goal: ${session.totalMinutes} of ${session.goalMinutes} minutes planned`}
+          />
+
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent">
+              Today&apos;s {language.name_en}
+            </p>
+            <h2
+              id="today-heading"
+              className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-primary sm:text-3xl"
+            >
+              {nextLesson ? nextLesson.title : "Your session is ready"}
+            </h2>
+
+            {/* Three real measures, laid out as a line rather than three cards. */}
+            <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
+              <div>
+                <dt className="text-xs text-muted">Reviews due</dt>
+                <dd className="text-lg font-semibold tabular-nums text-primary">
+                  {session.items.filter((item) => item.kind === "review").length}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Planned</dt>
+                <dd className="text-lg font-semibold tabular-nums text-primary">
+                  {session.totalMinutes > 0 ? `${session.totalMinutes} min` : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Lessons ready</dt>
+                <dd className="text-lg font-semibold tabular-nums text-primary">
+                  {session.lessonsAvailable > 0 ? session.lessonsAvailable : "—"}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <ButtonLink href={startHref} size="lg" className="sm:px-7">
+                {startLabel}
+                <Icon name="arrowRight" size={16} />
+              </ButtonLink>
+              <div className="sm:min-w-0">
+                <ModeSwitcher
+                  languageCode={language.code}
+                  active={mode}
+                  minutes={modeMinutes}
                 />
-              ) : (
-                <>
-                  <ul className="flex flex-col gap-2.5">
-                    {session.items.map((item, index) => (
-                      <li key={`${item.kind}-${index}`} className="flex items-center gap-3">
-                        <span
-                          aria-hidden="true"
-                          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-accent"
-                        >
-                          <Icon
-                            name={
-                              item.kind === "review"
-                                ? "cards"
-                                : item.kind === "listening"
-                                  ? "volume"
-                                  : item.kind === "speaking"
-                                    ? "speak"
-                                    : item.kind === "content"
-                                      ? "book"
-                                      : "learn"
-                            }
-                            size={15}
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1 text-sm text-primary">
-                          {item.label}
-                        </span>
-                        {item.minutes > 0 ? (
-                          <span className="shrink-0 text-xs tabular-nums text-muted">
-                            {item.minutes} min
-                          </span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-5">
-                    <ButtonLink href={startHref} size="lg" fullWidth>
-                      {startLabel}
-                      <Icon name="arrowRight" size={18} />
-                    </ButtonLink>
-                  </div>
-                </>
-              )}
+              </div>
             </div>
+
+            {session.items.length === 0 ? (
+              <p className="mt-4 text-sm text-secondary">
+                No cards are due and no lessons are published for this language yet.
+                Choose another language or bring in your own text.
+              </p>
+            ) : null}
           </div>
-        </Card>
+        </div>
       </section>
 
-      {/* ---- Metrics ------------------------------------------------------- */}
-      <section aria-labelledby="metrics-heading" className="flex flex-col gap-3">
-        <h2 id="metrics-heading" className="sr-only">
-          Your numbers
+      {/* ---- Pulse strip, replacing the six stat boxes --------------------- */}
+      <section aria-labelledby="pulse-heading">
+        <h2 id="pulse-heading" className="sr-only">
+          Your learning at a glance
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <StatTile
-            label="Streak"
-            value={stats ? stats.streak_current : null}
-            hint={stats?.streak_current ? "days in a row" : "start today"}
-            icon={<Icon name="flame" size={14} />}
-          />
-          <StatTile
-            label="Words learned"
-            value={stats ? stats.words_learned : null}
-            icon={<Icon name="plus" size={14} />}
-          />
-          <StatTile
-            label="Sentences"
-            value={stats ? stats.sentences_mastered : null}
-            hint="mastered"
-            icon={<Icon name="book" size={14} />}
-          />
-          <StatTile
-            label="Reviews due"
-            value={stats ? stats.review_cards_due : null}
-            icon={<Icon name="cards" size={14} />}
-          />
-          <StatTile
-            label="Listening"
-            value={
-              stats ? formatMinutes(stats.listening_seconds) : null
-            }
-            hint="minutes"
-            icon={<Icon name="volume" size={14} />}
-          />
-          <StatTile
-            label="Speaking"
-            value={stats ? formatMinutes(stats.speaking_seconds) : null}
-            hint="minutes"
-            icon={<Icon name="speak" size={14} />}
-          />
-        </div>
+        <LearningPulse items={pulse} />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -406,7 +445,9 @@ export default async function DashboardPage({
           <Card>
             <CardHeader
               title="This session"
-              description={`Composed for ${currentMode.label.toLowerCase()}${currentMode.minutes ? ` · about ${currentMode.minutes} minutes` : ""}.`}
+              description={`Composed for ${currentMode.label.toLowerCase()}${
+                modeMinutes[mode] ? ` · a ${modeMinutes[mode]} minute budget` : ""
+              }.`}
             />
             <dl className="mt-4 flex flex-col gap-3 text-sm">
               <PlanRow label="Mode" value={currentMode.label} />

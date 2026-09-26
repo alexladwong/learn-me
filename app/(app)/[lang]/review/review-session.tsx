@@ -5,7 +5,8 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/empty-state";
-import { AnswerPanel, AudioButtons } from "@/components/learning/answer-panel";
+import { AnswerPanel } from "@/components/learning/answer-panel";
+import { AudioButton } from "@/components/learning/audio-button";
 import { ProgressBar } from "@/components/ui/progress";
 import { cx } from "@/lib/cx";
 import { submitReview, type SubmitReviewResult } from "./actions";
@@ -500,7 +501,12 @@ function CardView({
         </p>
       </div>
 
-      <AudioButtons normalUrl={card.audioNormalUrl} slowUrl={card.audioSlowUrl} />
+      <AudioButton
+        text={card.surface}
+        languageCode={card.languageCode}
+        normalUrl={card.audioNormalUrl}
+        slowUrl={card.audioSlowUrl}
+      />
 
       {mode === "recall" && !revealed ? (
         <RecallInput value={typed} onChange={setTyped} onSubmit={reveal} />

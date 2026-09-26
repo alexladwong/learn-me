@@ -82,15 +82,33 @@ export default async function PlanPage({ params }: PageProps<"/[lang]/plan">) {
             note={language.name_en}
             dir={language.direction === "rtl" ? "rtl" : undefined}
           />
+          {/*
+            "Complete beginner" used to appear here as the *value* when no level
+            had been placed — an assumption rendered in the same weight as a real
+            answer. An unplaced learner is now shown as unplaced, and the note
+            explains what happens instead of standing in for the number.
+          */}
           <Summary
             label="Starting level"
-            value={levelChoice?.label ?? "Complete beginner"}
-            note={learnerOrNull.cefr_level ?? "Placed as you go"}
+            value={levelChoice?.label ?? "Not placed yet"}
+            note={
+              learnerOrNull.cefr_level
+                ? learnerOrNull.cefr_level
+                : "You will be placed as you go"
+            }
           />
           <Summary
             label="Daily target"
-            value={`${learnerOrNull.daily_minutes} minutes`}
-            note="Sized to what you said you can keep"
+            value={
+              learnerOrNull.daily_minutes > 0
+                ? `${learnerOrNull.daily_minutes} minutes`
+                : "Not set"
+            }
+            note={
+              learnerOrNull.daily_minutes > 0
+                ? "Sized to what you said you can keep"
+                : "No daily budget has been given for this language"
+            }
           />
           <Summary
             label="Aiming for"
@@ -154,8 +172,10 @@ export default async function PlanPage({ params }: PageProps<"/[lang]/plan">) {
                   <Badge tone="muted">{next.lesson.cefrLevel}</Badge>
                 ) : null}
                 <span className="text-xs text-muted">
-                  {next.lesson.stepCount} exercises · about{" "}
-                  {next.lesson.estimatedMinutes} min
+                  {next.lesson.stepCount} exercises
+                  {next.lesson.estimatedMinutes !== null
+                    ? ` · about ${next.lesson.estimatedMinutes} min`
+                    : ""}
                 </span>
               </div>
               <p className="mt-2 text-lg font-semibold tracking-tight text-primary">

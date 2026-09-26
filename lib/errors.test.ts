@@ -47,6 +47,10 @@ describe("isUserFacingMessage", () => {
       "Cannot read properties of undefined (reading 'id')",
       "x is not a function",
       "TypeError: undefined is not a function",
+      // What a `fetch` rejection actually says. None of these is copy.
+      "Failed to fetch",
+      "NetworkError when attempting to fetch resource.",
+      "Load failed",
     ];
     for (const message of machine) {
       assert.equal(isUserFacingMessage(message), false, `should reject: ${message}`);

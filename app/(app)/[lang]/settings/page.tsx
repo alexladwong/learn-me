@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { SettingsForm } from "./settings-form";
+import { SettingsWorkspace } from "./settings-form";
+import {
+  DEFAULT_SETTINGS_SECTION,
+  isSettingsSection,
+  type SettingsSection,
+} from "./sections";
 import { loadLanguageContext } from "@/lib/db/context";
 import { listLearnerLanguages } from "@/lib/db/learner";
 import { getServerClient } from "@/lib/insforge/server-client";
@@ -7,8 +12,18 @@ import { requireProfile } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default async function SettingsPage({ params }: PageProps<"/[lang]/settings">) {
+export default async function SettingsPage({
+  params,
+  searchParams,
+}: PageProps<"/[lang]/settings">) {
   const { lang } = await params;
+  const query = await searchParams;
+  // The section lives in the URL, so it is shareable, survives a refresh, and
+  // works without JavaScript.
+  const requested = typeof query.section === "string" ? query.section : undefined;
+  const activeSection: SettingsSection = isSettingsSection(requested)
+    ? requested
+    : DEFAULT_SETTINGS_SECTION;
   const { user, profile } = await requireProfile();
   const { language, learner } = await loadLanguageContext(lang);
 
@@ -32,12 +47,14 @@ export default async function SettingsPage({ params }: PageProps<"/[lang]/settin
         </p>
       </header>
 
-      <SettingsForm
+      <SettingsWorkspace
         language={language}
         learner={learner}
         displayName={profile.display_name ?? user.email?.split("@")[0] ?? ""}
         timezone={profile.timezone ?? ""}
+        email={user.email ?? ""}
         otherLanguages={otherLanguages}
+        activeSection={activeSection}
       />
     </div>
   );

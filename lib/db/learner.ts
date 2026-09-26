@@ -219,6 +219,99 @@ export type OnboardingAnswers = {
 };
 
 /**
+ * The learner's persisted active language, or `null` when they have none.
+ *
+ * This is what turns "which language am I in" into something durable. The URL is
+ * how the learner expresses it moment to moment, but a bookmark, a fresh visit
+ * to `/` or a reload of a route with no language in it has to resolve through
+ * stored state — otherwise the switch is forgotten the moment they navigate away
+ * from it.
+ *
+ * `cefr_level` comes back with it because a learner who started a language but
+ * never finished onboarding has a row and no plan, and belongs in onboarding
+ * rather than on a dashboard built from defaults.
+ */
+export async function getActiveLanguage(
+  client: InsForgeClient,
+): Promise<{ code: string; onboarded: boolean } | null> {
+  const { data, error } = await client.database
+    .from("learner_languages")
+    .select("language_code,cefr_level")
+    .eq("is_active", true)
+    .order("is_primary", { ascending: false })
+    .order("started_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw dbError("learner_languages.active", error);
+  if (!data || !isRecord(data)) return null;
+
+  return {
+    code: requireString(data, "learner_languages", "language_code"),
+    onboarded: optionalString(data, "cefr_level") !== null,
+  };
+}
+
+/**
+ * Make one of the learner's existing languages the active one.
+ *
+ * `is_primary` is the persisted answer to "which language is this learner in".
+ * The URL is what the learner sees, but it is not durable: reloading a bookmarked
+ * route, or landing on `/` from anywhere, resolves through this flag. Keeping
+ * only the URL in sync is what makes a switcher feel broken the next morning.
+ *
+ * Two statements, not one, and that is load-bearing: `learner_languages_one_
+ * primary_idx` is a partial unique index over `(user_id) WHERE is_primary`, so
+ * the previously primary row has to be cleared before the new one is claimed.
+ * Setting both in a single statement would violate the index mid-statement.
+ *
+ * Returns `false` when the code is not one of this learner's active languages.
+ * The caller must not be able to move someone onto a language they never
+ * enrolled in, and RLS alone would not catch that — the update would simply
+ * match no rows and report success.
+ *
+ * This never inserts, deletes or re-creates a `learner_languages` row. Each
+ * language keeps its own plan, level, progress and review schedule; switching is
+ * a pointer move, not a re-enrolment.
+ */
+export async function setPrimaryLanguage(
+  client: InsForgeClient,
+  userId: string,
+  languageCode: string,
+): Promise<boolean> {
+  const { data, error } = await client.database
+    .from("learner_languages")
+    .select("id,is_primary")
+    .eq("user_id", userId)
+    .eq("language_code", languageCode)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw dbError("learner_languages.select", error);
+  if (!data || !isRecord(data)) return false;
+  if (data.is_primary === true) return true;
+
+  const cleared = await client.database
+    .from("learner_languages")
+    .update({ is_primary: false })
+    .eq("user_id", userId)
+    .eq("is_primary", true);
+
+  if (cleared.error) throw dbError("learner_languages.clear_primary", cleared.error);
+
+  const claimed = await client.database
+    .from("learner_languages")
+    .update({ is_primary: true })
+    .eq("user_id", userId)
+    .eq("language_code", languageCode);
+
+  if (claimed.error) throw dbError("learner_languages.set_primary", claimed.error);
+
+  return true;
+}
+
+/**
  * Persist the onboarding answers.
  *
  * `learner_languages` is upserted on `(user_id, language_code)` so re-running

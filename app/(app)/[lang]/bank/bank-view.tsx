@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/empty-state";
-import { AudioButtons } from "@/components/learning/answer-panel";
+import { AudioButton } from "@/components/learning/audio-button";
 import { cx } from "@/lib/cx";
 import { removeItems, toggleFavorite } from "./actions";
 import type { BankEntry } from "@/lib/db/bank";
@@ -17,12 +17,6 @@ import type { BankEntry } from "@/lib/db/bank";
  * filtered view is shareable, survives a refresh, and works with the back
  * button. Only the inherently interactive parts are client-side.
  */
-
-export type BankFilterValues = {
-  kind: "all" | "word" | "sentence";
-  search: string;
-  favoritesOnly: boolean;
-};
 
 export function BankFilters({
   languageCode,
@@ -266,7 +260,14 @@ function BankEntryCard({
 
       {expanded ? (
         <div className="mt-3 flex flex-col gap-4 border-t border-line pt-4">
-          <AudioButtons normalUrl={entry.audioNormalUrl} slowUrl={entry.audioSlowUrl} />
+          {/* Real audio: a stored file when one exists, otherwise the device's
+              own voice for this language. */}
+          <AudioButton
+            text={entry.surface}
+            languageCode={languageCode}
+            normalUrl={entry.audioNormalUrl}
+            slowUrl={entry.audioSlowUrl}
+          />
 
           {entry.grammarNote ? (
             <div className="rounded-[var(--radius)] border border-line bg-surface-sunken px-4 py-3">
@@ -348,16 +349,11 @@ function formatWhen(iso: string): string {
   return `${Math.round(days)} days`;
 }
 
-/** Used by the page to read filters out of the URL. */
-export function parseBankFilter(params: {
-  kind?: string | string[];
-  q?: string | string[];
-  favorites?: string | string[];
-}): BankFilterValues {
-  const kind = typeof params.kind === "string" ? params.kind : "all";
-  return {
-    kind: kind === "word" || kind === "sentence" ? kind : "all",
-    search: typeof params.q === "string" ? params.q : "",
-    favoritesOnly: params.favorites === "1",
-  };
-}
+/**
+ * Filter parsing lives in `./filter.ts`, a plain module with no directive, so the
+ * Server Component can import it as well. Re-exported here for the view's own use.
+ */
+import { parseBankFilter } from "./filter";
+import type { BankFilterValues } from "./filter";
+
+export { parseBankFilter };

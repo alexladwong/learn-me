@@ -1,17 +1,24 @@
 /**
- * Conversation scenarios for the AI tutor.
+ * Prompt design for the AI tutor — NOT product content.
  *
- * A tutor is not a chatbot. The difference is that a tutor has a *task*: it is
- * trying to get you to produce specific language, it knows what you can already
- * handle, and it corrects in a way that does not stop you talking.
+ * ## Read this before importing it anywhere near a route
  *
- * This module is where that intent lives. It is pure data and pure functions, so
- * the scenario design can be read and reviewed without a provider, and so the
- * prompt-building is testable — a prompt that asks a beginner to discuss abstract
- * opinions would produce a bad lesson, and that is a bug worth catching in a test
- * rather than in a conversation.
+ * The scenario catalogue below is **invented material written in TypeScript**. It
+ * was previously rendered on `/[lang]/speak` as a product catalogue — "Coffee
+ * shop · A1–B1 · 3 objectives · 6 phrases · Phrases you can lean on" — which told
+ * a learner the product had a speaking curriculum. It did not. It had this file.
+ * That page now reads only what the database can answer and shows an honest empty
+ * state where it cannot.
  *
- * The scenarios are the ones the brief named, plus a few the level bands need.
+ * So this module has exactly one legitimate use: it is the input to the tutor's
+ * prompt-building, which cannot run because no model gateway key is configured.
+ * Its unit tests assert that the prompts a scenario produces are level-appropriate
+ * — a prompt that asks a beginner to discuss abstract opinions would produce a bad
+ * lesson, and that is worth catching in a test.
+ *
+ * It must never again be rendered as content a learner can see. If speaking
+ * scenarios are wanted in the product, they need a persisted table and rows — not
+ * this array moved somewhere else.
  */
 
 import type { CefrLevel } from "@/lib/types";

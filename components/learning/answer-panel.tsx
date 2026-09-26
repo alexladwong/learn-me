@@ -1,8 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { CapabilityNotice } from "@/components/ui/empty-state";
 import { cx } from "@/lib/cx";
 
 /**
@@ -121,95 +119,6 @@ export function AnswerPanel({
             ))}
           </ul>
         </details>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * Native-audio playback.
- *
- * Renders an explicit "not generated yet" notice when the item has no audio URL
- * rather than a play button that does nothing. Spanish is flagged as supporting
- * audio, but no provider has produced files, so the distinction between "this
- * language cannot do audio" and "this item has not been generated yet" is real
- * and worth showing.
- */
-export function AudioButtons({
-  normalUrl,
-  slowUrl,
-}: {
-  normalUrl: string | null;
-  slowUrl: string | null;
-}) {
-  const normalRef = useRef<HTMLAudioElement>(null);
-  const slowRef = useRef<HTMLAudioElement>(null);
-  const [active, setActive] = useState<"normal" | "slow" | null>(null);
-
-  if (!normalUrl) {
-    return (
-      <CapabilityNotice
-        title="Audio not generated for this item"
-        description="Audio is produced once per item and cached for every learner. It has not been generated yet, so no playback is offered rather than a control that does nothing."
-      />
-    );
-  }
-
-  const play = (which: "normal" | "slow") => {
-    const element = which === "normal" ? normalRef.current : slowRef.current;
-    if (!element) return;
-    element.currentTime = 0;
-    void element.play();
-    setActive(which);
-  };
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => play("normal")}
-        aria-pressed={active === "normal"}
-        className={cx(
-          "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors",
-          active === "normal"
-            ? "border-accent bg-accent-subtle text-accent"
-            : "border-line-strong bg-surface-raised text-primary hover:bg-surface-hover",
-        )}
-      >
-        <Icon name="volume" size={16} />
-        Play
-      </button>
-
-      {slowUrl ? (
-        <button
-          type="button"
-          onClick={() => play("slow")}
-          aria-pressed={active === "slow"}
-          className={cx(
-            "inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors",
-            active === "slow"
-              ? "border-accent bg-accent-subtle text-accent"
-              : "border-line-strong bg-surface-raised text-primary hover:bg-surface-hover",
-          )}
-        >
-          <Icon name="clock" size={16} />
-          Slow
-        </button>
-      ) : null}
-
-      <audio
-        ref={normalRef}
-        src={normalUrl}
-        onEnded={() => setActive(null)}
-        className="hidden"
-      />
-      {slowUrl ? (
-        <audio
-          ref={slowRef}
-          src={slowUrl}
-          onEnded={() => setActive(null)}
-          className="hidden"
-        />
       ) : null}
     </div>
   );

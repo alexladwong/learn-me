@@ -79,16 +79,26 @@ export const LEARNING_MODES = [
 ] as const;
 export type LearningMode = (typeof LEARNING_MODES)[number];
 
+/**
+ * What each mode is called and what it is for.
+ *
+ * There is deliberately **no `minutes` field here any more**. It held hardcoded
+ * lengths — study 30, speak 10 — which disagreed with the session the learner
+ * was actually given: `minutesForMode` sizes `study` from the learner's own
+ * `daily_minutes`, so a twenty-minute learner saw a "Study 30m" chip above a
+ * session planned for twenty. A mode's length is computed by
+ * `minutesForMode(mode, learner.daily_minutes)` and nowhere else.
+ */
 export const LEARNING_MODE_META: Record<
   LearningMode,
-  { label: string; minutes: number | null; description: string }
+  { label: string; description: string }
 > = {
-  quick: { label: "Quick", minutes: 5, description: "Vocabulary and recall" },
-  commute: { label: "Commute", minutes: 15, description: "Audio-focused practice" },
-  study: { label: "Study", minutes: 30, description: "Full structured lesson" },
-  speak: { label: "Speak", minutes: 10, description: "Conversation practice" },
-  review: { label: "Review", minutes: null, description: "Spaced repetition only" },
-  explore: { label: "Explore", minutes: null, description: "Learn from real-world content" },
+  quick: { label: "Quick", description: "Vocabulary and recall" },
+  commute: { label: "Commute", description: "Audio-focused practice" },
+  study: { label: "Study", description: "Full structured lesson" },
+  speak: { label: "Speak", description: "Conversation practice" },
+  review: { label: "Review", description: "Spaced repetition only" },
+  explore: { label: "Explore", description: "Learn from real-world content" },
 };
 
 export type TextDirection = "ltr" | "rtl";

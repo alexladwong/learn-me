@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ServiceWorkerRegistrar } from "@/components/layout/service-worker";
+import { AudioLifecycle } from "@/components/layout/audio-lifecycle";
+import { NativeShell } from "@/components/native/native-shell";
+import { THEME_SCRIPT } from "@/components/layout/theme-toggle";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import "./globals.css";
 
@@ -65,8 +69,35 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
       suppressHydrationWarning
     >
+      <head>
+        {/* All inputs put be incryted */}
+
+        {/*
+          Applies a stored appearance before first paint, so there is no flash of
+          the wrong theme. Light is the default: the attribute is only present
+          when a learner has chosen something else.
+
+          This goes through `next/script` with `beforeInteractive` rather than a
+          bare `<script>` tag. React 19 does not execute a script element it
+          renders, so a plain tag produced a console error on every route and —
+          worse — ran only when the server happened to send it, which is exactly
+          the client-side navigation where the flash appears. `beforeInteractive`
+          is documented as belonging in the root layout, which is where it is.
+        */}
+        <Script id="theme-restore" strategy="beforeInteractive">
+          {THEME_SCRIPT}
+        </Script>
+      </head>
       <body className="min-h-full bg-surface text-primary antialiased">
         {children}
+          {/* Add Here */}
+        
+        <AudioLifecycle />
+        {/*
+          A no-op in a browser tab; in the native shell it owns the status bar,
+          the Android back button, connectivity and the OAuth deep link.
+        */}
+        <NativeShell />
         <ServiceWorkerRegistrar />
       </body>
     </html>

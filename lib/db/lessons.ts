@@ -62,7 +62,8 @@ export type Lesson = {
   description: string | null;
   unitTitle: string;
   trackTitle: string;
-  estimatedMinutes: number;
+  /** Authored on the mission. `null` when it does not state one — never a default. */
+  estimatedMinutes: number | null;
   steps: LessonStep[];
 };
 
@@ -75,7 +76,8 @@ export type LessonSummary = {
   unitSlug: string;
   /** The CEFR level this lesson is authored for, or null when unbanded. */
   cefrLevel: CefrLevel | null;
-  estimatedMinutes: number;
+  /** Authored on the mission. `null` when it does not state one — never a default. */
+  estimatedMinutes: number | null;
   stepCount: number;
   /** Items this mission teaches, so the path can show what is inside. */
   itemCount: number;
@@ -196,7 +198,7 @@ export async function listLessons(
           cefrLevel:
             nullableEnum<CefrLevel>(unit, "cefr_level", CEFR_LEVELS) ??
             nullableEnum<CefrLevel>(track, "cefr_band", CEFR_LEVELS),
-          estimatedMinutes: optionalNumber(row, "estimated_minutes") || 8,
+          estimatedMinutes: nullableMinutes(row, "estimated_minutes"),
           stepCount: steps.length,
           itemCount: itemIds.size,
           // Carried only for ordering; stripped before returning.
@@ -290,7 +292,7 @@ export async function getLesson(
     description: optionalString(data, "description"),
     unitTitle: optionalString(unit, "title") ?? "",
     trackTitle: optionalString(track, "title") ?? "",
-    estimatedMinutes: optionalNumber(data, "estimated_minutes") || 8,
+    estimatedMinutes: nullableMinutes(data, "estimated_minutes"),
     steps,
   };
 }
@@ -384,4 +386,20 @@ export function startingLevel(
     return (CEFR_LEVELS[Math.max(0, index - 1)] ?? "A1") as CefrLevel;
   }
   return "A1";
+}
+
+/**
+ * A mission's authored length, or `null`.
+ *
+ * The bug this replaces was `optionalNumber(row, "estimated_minutes") || 8`: a
+ * mission that never stated a duration was reported as eight minutes, which then
+ * appeared as "about 8 minutes" on the path and as the whole planned cost of a
+ * lesson on the dashboard. A missing value has to stay missing so the UI can omit
+ * the sentence — `0` from the database is also treated as "not stated", because a
+ * lesson that takes no time is not a thing anyone authored.
+ */
+function nullableMinutes(row: Record<string, unknown>, key: string): number | null {
+  const value = optionalNumber(row, key);
+  if (value === undefined || value <= 0) return null;
+  return value;
 }

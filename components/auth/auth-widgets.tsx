@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { startOAuthAction, type AuthFormState } from "@/app/(auth)/actions";
 import { FormError } from "@/components/ui/form";
@@ -16,14 +16,46 @@ const initialState: AuthFormState = { error: null };
  */
 export function GoogleButton({ label }: { label: string }) {
   const [state, formAction] = useActionState(async () => startOAuthAction(), initialState);
+  const [nativeError, setNativeError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+
+  /*
+   * Only the *start* of the flow differs between web and native; the button, its
+   * label, its pending state and its error slot are shared. Google refuses OAuth
+   * inside a WebView, so the shell hands off to the system browser and comes back
+   * through `learnme://auth/callback` — everything after that is the same app.
+   */
+  async function onClick(event: React.MouseEvent<HTMLButtonElement>) {
+    const { isNativeShell, beginNativeSignIn } = await import("@/lib/auth/native-client");
+    if (!(await isNativeShell())) return; // fall through to the form action
+
+    event.preventDefault();
+    setNativeError(null);
+    setStarting(true);
+    try {
+      const result = await beginNativeSignIn();
+      if ("error" in result) setNativeError(result.error);
+      // On success the system browser has taken over; the deep link resumes us.
+    } catch {
+      setNativeError("Could not open the sign-in page.");
+    } finally {
+      setStarting(false);
+    }
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <FormError message={state.error} />
-      <SubmitButton variant="secondary" fullWidth pendingLabel="Redirecting…">
-        <GoogleMark />
-        {label}
-      </SubmitButton>
+      <FormError message={nativeError ?? state.error} />
+      <span onClick={onClick} className="contents">
+        <SubmitButton
+          variant="secondary"
+          fullWidth
+          pendingLabel={starting ? "Opening…" : "Redirecting…"}
+        >
+          <GoogleMark />
+          {label}
+        </SubmitButton>
+      </span>
     </form>
   );
 }

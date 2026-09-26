@@ -12,15 +12,6 @@ import type {
 import { budgetFor, estimateReviewMinutes } from "@/lib/learning/budget";
 
 /**
- * A guided lesson's nominal cost.
- *
- * Separate from the budget module because a lesson's length is authored content
- * (`missions.estimated_minutes`), not something derived from the learner's time.
- * This is the fallback used when a mission has not stated one.
- */
-const MINUTES_PER_LESSON = 8;
-
-/**
  * Compose the answer to "what should I learn next?".
  *
  * This is the single entry point the dashboard calls. Everything the learner
@@ -43,8 +34,10 @@ export async function composeTodaySession(
   client: InsForgeClient,
   language: LearnerLanguage,
   mode: LearningMode,
+  options: ComposeOptions = {},
 ): Promise<TodaySession> {
   const languageCode = language.language_code;
+  const lessonMinutes = options.lessonMinutes ?? null;
 
   const [stats, missionsAvailable] = await Promise.all([
     getUserStats(client, languageCode),
@@ -81,19 +74,33 @@ export async function composeTodaySession(
   const timeAfterReviews = items.reduce((sum, item) => sum + item.minutes, 0);
   const remainingAfterReviews = Math.max(0, goalMinutes - timeAfterReviews);
 
-  // 2. Guided lesson — the spine of a Study session, and a short one in Quick.
+  /*
+   * 2. Guided lesson — the spine of a Study session, and a short one in Quick.
+   *
+   * Its cost is the mission's own `estimated_minutes`, passed in by the caller
+   * that already resolved which mission is next. This used to be a module
+   * constant of eight minutes, which put a duration on the dashboard that no
+   * authored lesson had claimed — the number was ours, not the curriculum's. When
+   * the next mission has not stated a length, the lesson contributes no minutes
+   * and says so rather than borrowing one.
+   */
   const wantsLesson = mode === "study" || mode === "quick";
-  if (wantsLesson && missionsAvailable > 0 && remainingAfterReviews > 0) {
+  if (wantsLesson && missionsAvailable > 0 && remainingAfterReviews > 0 && lessonMinutes !== null) {
     items.push({
       kind: "lesson",
       label: mode === "quick" ? "One short lesson" : "Guided lesson",
-      minutes: Math.min(MINUTES_PER_LESSON, remainingAfterReviews),
+      minutes: Math.min(lessonMinutes, remainingAfterReviews),
       href: `/${languageCode}/path`,
     });
-  } else if (wantsLesson && missionsAvailable === 0) {
+  } else if (wantsLesson && (missionsAvailable === 0 || lessonMinutes === null)) {
     // Named, with zero minutes: the session shows the intent and the honest
     // reason it cannot be filled.
-    items.push({ kind: "lesson", label: "Guided lesson", minutes: 0 });
+    items.push({
+      kind: "lesson",
+      label:
+        missionsAvailable === 0 ? "Guided lesson" : "Guided lesson — length not stated",
+      minutes: 0,
+    });
   }
 
   // 3. Listening — Commute is audio-first by definition.
@@ -143,6 +150,19 @@ export async function composeTodaySession(
     totalMinutes,
   };
 }
+
+/**
+ * What the composed session needs from its caller.
+ *
+ * `lessonMinutes` is the one input the composer cannot get on its own without a
+ * second query, and it is the input that keeps the session's stated length
+ * honest: the length of a lesson is authored content (`missions.estimated_minutes`),
+ * not a constant this module may invent.
+ */
+export type ComposeOptions = {
+  /** `missions.estimated_minutes` for the mission the learner would be given. */
+  lessonMinutes?: number | null;
+};
 
 /**
  * The time budget a mode implies.

@@ -30,6 +30,18 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    /*
+     * The Capacitor native projects. `npx cap sync` writes the web bridge and
+     * copies generated web assets into them, and Gradle writes build output —
+     * none of it is source, and `android/app/build/…/native-bridge.js` alone was
+     * producing fourteen lint warnings on every run.
+     */
+    "android/**",
+    "ios/**",
+    // Generated store artwork, produced by `scripts/generate-app-icons.mjs`.
+    "assets/**",
+    // Capacitor requires a `webDir`; the placeholder there is never served.
+    "native/**",
   ]),
 ]);
 

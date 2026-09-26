@@ -16,131 +16,267 @@
    ========================================================================== */
 
 :root {
-  /* ---- Learning surface ----
-     A cool graphite-tinted neutral rather than a warm cream. The warmth read as
-     stationery; a faint blue-grey reads as a workspace, which is what this is.
-     The tint is deliberately tiny (chroma 0.003–0.006, hue 265): enough to sit
-     with the teal accent, not enough to look blue. */
-  --surface: oklch(97.6% 0.003 265);
-  --surface-raised: oklch(99.4% 0.002 265);
-  --surface-sunken: oklch(94.8% 0.005 265);
-  --surface-hover: oklch(96% 0.005 265);
+  /* ---- Page and text ----
+     A warm off-white page rather than a cool grey. Warmth is what makes the
+     product feel editorial instead of clinical, and it gives the teal accent
+     something to sit against. Text is a deep desaturated teal-navy: near-black
+     reads as a default, this reads as chosen. */
+  --surface: oklch(98.2% 0.006 92);
+  --surface-raised: oklch(99.5% 0.003 92);
+  --surface-sunken: oklch(95.8% 0.008 92);
+  --surface-hover: oklch(96.8% 0.008 92);
+  /* The unfilled half of a progress bar. It needs its own value rather than
+     `surface-sunken`: a bar sits on a raised card (99.5%), on mint (96.4%) and
+     on mist (97.6%), and a 95.8% track disappears on two of those three. This is
+     dark enough to read on all of them and still light enough to recede. */
+  --track: oklch(91% 0.012 195);
 
-  --text-primary: oklch(21% 0.012 265);
-  --text-secondary: oklch(44% 0.014 265);
-  --text-muted: oklch(56% 0.012 265);
+  --text-primary: oklch(24% 0.028 225);
+  --text-secondary: oklch(45% 0.026 225);
+  --text-muted: oklch(58% 0.020 225);
   --text-on-accent: oklch(99% 0 0);
 
-  --border: oklch(90% 0.006 265);
-  --border-strong: oklch(83% 0.008 265);
+  --border: oklch(90.5% 0.010 195);
+  --border-strong: oklch(83.5% 0.014 195);
 
-  /* Brand: a deep, desaturated teal. Restrained rather than bright — it has to
-     carry primary actions across a whole product without shouting. */
+  /* ---- Section tints ----
+     The composition device. Alternating full-bleed bands of these is what gives
+     the page rhythm; without them every section sits on the same field and the
+     layout reads as a list of boxes. */
+  --tint-mint: oklch(96.4% 0.024 178);      /* pale aqua, for feature bands */
+  --tint-mist: oklch(97.6% 0.014 178);      /* a quieter mint, for wide panels */
+  --tint-cream: oklch(98% 0.010 85);        /* soft cream, for product content */
+  --tint-warm: oklch(97.4% 0.012 78);       /* warm neutral, for social proof */
+  --tint-deep: oklch(31% 0.038 228);        /* deep teal-navy, for the closing band */
+  --tint-deep-raised: oklch(35.5% 0.040 228);
+  --tint-deep-line: oklch(42% 0.040 228);
+  --tint-deep-text: oklch(97% 0.008 195);
+  --tint-deep-text-soft: oklch(82% 0.020 195);
+
+  /* Brand: a deep, desaturated teal. Restrained rather than bright — it carries
+     every primary action in the product without shouting. */
   --accent: oklch(48% 0.085 195);
   --accent-hover: oklch(42% 0.085 195);
-  --accent-soft: oklch(94% 0.025 195);
-  --accent-subtle: oklch(96.5% 0.012 195);
+  --accent-soft: oklch(94% 0.030 190);
+  --accent-subtle: oklch(96.5% 0.016 190);
+
+  /* Supporting warm accent. Used sparingly — a single highlight, never a theme. */
+  --coral: oklch(62% 0.120 38);
+  --coral-soft: oklch(95% 0.030 38);
 
   /* Status — never the only signal; always paired with an icon or label. */
   --success: oklch(48% 0.085 155);
-  --success-soft: oklch(94% 0.03 155);
-  --warning: oklch(58% 0.11 70);
+  --success-soft: oklch(94% 0.030 155);
+  --warning: oklch(58% 0.110 70);
   --warning-soft: oklch(95% 0.035 70);
-  --danger: oklch(50% 0.15 27);
-  --danger-soft: oklch(95% 0.03 27);
-  /* Distinct from both the accent and success, so a "new" marker never reads as
-     either a primary action or a correct answer. */
-  --info: oklch(48% 0.10 275);
+  --danger: oklch(50% 0.150 27);
+  --danger-soft: oklch(95% 0.030 27);
+  --info: oklch(48% 0.100 275);
   --info-soft: oklch(95% 0.025 275);
 
   --ring: oklch(48% 0.085 195);
 
-  /* Moderate corner radius. Much above ~0.75rem starts to read as a toy. */
-  --radius-sm: 0.25rem;
-  --radius: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  /* Layered surfaces want a slightly larger radius than a flat UI does. */
+  --radius-sm: 0.375rem;
+  /* Oversized, for full-width section panels. The reference's character comes
+     largely from how large these are relative to the content inside them. */
+  --radius-section: 1.75rem;
+  --radius: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
 
-  --shadow-card: 0 1px 2px oklch(21% 0.012 265 / 0.04);
-  --shadow-raised: 0 1px 3px oklch(21% 0.012 265 / 0.06),
-                   0 6px 16px -8px oklch(21% 0.012 265 / 0.10);
+  /* Softer and more diffuse than before: shadows here suggest depth between
+     layers rather than drawing attention to a box. */
+  --shadow-card: 0 1px 2px oklch(24% 0.028 225 / 0.04);
+  --shadow-raised: 0 2px 4px oklch(24% 0.028 225 / 0.04),
+                   0 12px 28px -12px oklch(24% 0.028 225 / 0.14);
+  --shadow-float: 0 4px 8px oklch(24% 0.028 225 / 0.05),
+                  0 24px 56px -20px oklch(24% 0.028 225 / 0.22);
+
+  /* A hairline of light along the top edge, which is what makes a surface read
+     as a physical layer instead of a filled rectangle. */
+  --inner-highlight: inset 0 1px 0 oklch(100% 0 0 / 0.7);
 
   color-scheme: light;
 }
 
-/* Instrument surface. Applied to a subtree (the analytics area) so the
-   dashboard can stay on paper while Progress reads as instrumentation. */
+/* ---------------------------------------------------------------------------
+   Analysis surface.
+   ---------------------------------------------------------------------------
+   Progress and DNA used to invert to a dark "instrument" palette. That read as a
+   different product bolted onto this one, and it made light mode feel unfinished
+   — the authenticated app is meant to be light-first.
+   
+   It now stays on a light surface but shifts cooler and slightly denser, so data
+   still reads as analysis rather than as lesson content, without inverting the
+   page.
+   --------------------------------------------------------------------------- */
 .instrument {
-  --surface: oklch(19% 0.010 265);
-  --surface-raised: oklch(23.5% 0.012 265);
-  --surface-sunken: oklch(16% 0.010 265);
-  --surface-hover: oklch(26% 0.014 265);
+  --surface: oklch(97.4% 0.008 200);
+  --surface-raised: oklch(99.6% 0.003 200);
+  --surface-sunken: oklch(95.2% 0.010 200);
+  --surface-hover: oklch(96.2% 0.010 200);
+  --track: oklch(90.5% 0.014 200);
 
-  --text-primary: oklch(96% 0.004 265);
-  --text-secondary: oklch(79% 0.010 265);
-  --text-muted: oklch(66% 0.012 265);
-  --text-on-accent: oklch(99% 0 0);
+  --text-primary: oklch(24% 0.028 225);
+  --text-secondary: oklch(45% 0.024 225);
+  --text-muted: oklch(58% 0.018 225);
 
-  --border: oklch(30% 0.014 265);
-  --border-strong: oklch(38% 0.016 265);
+  --border: oklch(90% 0.012 200);
+  --border-strong: oklch(83.5% 0.016 200);
 
-  --accent: oklch(72% 0.095 195);
-  --accent-hover: oklch(78% 0.095 195);
-  --accent-soft: oklch(30% 0.035 195);
-  --accent-subtle: oklch(26% 0.020 195);
+  --tint-mint: oklch(96.4% 0.024 178);
+  --tint-mist: oklch(97.6% 0.014 178);
+  --tint-cream: oklch(98% 0.010 85);
+  --tint-warm: oklch(97.4% 0.012 78);
+  --tint-deep: oklch(31% 0.038 228);
+  --tint-deep-raised: oklch(35.5% 0.040 228);
+  --tint-deep-line: oklch(42% 0.040 228);
+  --tint-deep-text: oklch(97% 0.008 195);
+  --tint-deep-text-soft: oklch(82% 0.020 195);
 
-  --success: oklch(74% 0.095 155);
-  --success-soft: oklch(29% 0.035 155);
-  --warning: oklch(79% 0.11 75);
-  --warning-soft: oklch(31% 0.040 75);
-  --danger: oklch(69% 0.14 27);
-  --danger-soft: oklch(31% 0.050 27);
-  --info: oklch(74% 0.10 275);
-  --info-soft: oklch(30% 0.040 275);
+  --accent: oklch(48% 0.085 195);
+  --accent-hover: oklch(42% 0.085 195);
+  --accent-soft: oklch(94% 0.030 190);
+  --accent-subtle: oklch(96.5% 0.016 190);
 
-  --ring: oklch(72% 0.095 195);
+  --coral: oklch(62% 0.120 38);
+  --coral-soft: oklch(95% 0.030 38);
 
-  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.3);
-  --shadow-raised: 0 8px 24px -8px oklch(0% 0 0 / 0.5);
+  --success: oklch(48% 0.085 155);
+  --success-soft: oklch(94% 0.030 155);
+  --warning: oklch(58% 0.110 70);
+  --warning-soft: oklch(95% 0.035 70);
+  --danger: oklch(50% 0.150 27);
+  --danger-soft: oklch(95% 0.030 27);
+  --info: oklch(48% 0.100 275);
+  --info-soft: oklch(95% 0.025 275);
 
-  color-scheme: dark;
+  --ring: oklch(48% 0.085 195);
+  --shadow-card: 0 1px 2px oklch(24% 0.028 225 / 0.04);
+  --shadow-raised: 0 2px 4px oklch(24% 0.028 225 / 0.04),
+                   0 12px 28px -12px oklch(24% 0.028 225 / 0.14);
+  --inner-highlight: inset 0 1px 0 oklch(100% 0 0 / 0.7);
+
+  color-scheme: light;
 }
 
 /* Dark mode swaps the paper tokens. The instrument subtree is already dark,
    so it keeps its own values. */
+/* ---------------------------------------------------------------------------
+   Appearance.
+   ---------------------------------------------------------------------------
+   Light is the default experience, deliberately. It used to follow the OS with
+   `prefers-color-scheme`, which meant a learner on a dark-set machine never saw
+   the light theme at all — and the product's own design target is the light one.
+
+   So a theme is applied by an explicit `data-theme` attribute, written before
+   first paint by the inline script in `app/layout.tsx`:
+     (no attribute)  -> light, the default
+     data-theme=dark -> dark
+     data-theme=system -> follows the OS via the media query below
+   --------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  /* Deep navy rather than near-black. A pure-black page removes every
+     opportunity for the surface layers to be seen at all. */
+  --surface: oklch(21% 0.022 245);
+  --surface-raised: oklch(25.5% 0.024 245);
+  --surface-sunken: oklch(18% 0.020 245);
+  --surface-hover: oklch(28.5% 0.026 245);
+  --track: oklch(34% 0.022 240);
+
+  --text-primary: oklch(96% 0.008 195);
+  --text-secondary: oklch(79% 0.016 210);
+  --text-muted: oklch(66% 0.018 220);
+
+  --border: oklch(32% 0.024 235);
+  --border-strong: oklch(40% 0.028 235);
+
+  /* Muted teal surfaces with softer cyan highlights, so dark mode keeps the
+     same tinted-band rhythm the light theme has. */
+  --tint-mint: oklch(25% 0.030 200);
+  --tint-mist: oklch(23% 0.020 200);
+  --tint-cream: oklch(24% 0.014 80);
+  --tint-warm: oklch(26% 0.020 60);
+  --tint-deep: oklch(15% 0.024 245);
+  --tint-deep-raised: oklch(19% 0.026 245);
+  --tint-deep-line: oklch(28% 0.026 235);
+  --tint-deep-text: oklch(96% 0.008 195);
+  --tint-deep-text-soft: oklch(78% 0.018 205);
+
+  --accent: oklch(76% 0.095 195);
+  --accent-hover: oklch(82% 0.095 195);
+  --accent-soft: oklch(29% 0.040 195);
+  --accent-subtle: oklch(25% 0.024 195);
+
+  --coral: oklch(76% 0.115 45);
+  --coral-soft: oklch(28% 0.045 45);
+
+  --success: oklch(74% 0.095 155);
+  --success-soft: oklch(27% 0.035 155);
+  --warning: oklch(79% 0.110 75);
+  --warning-soft: oklch(29% 0.040 75);
+  --danger: oklch(70% 0.140 27);
+  --danger-soft: oklch(29% 0.050 27);
+  --info: oklch(74% 0.100 275);
+  --info-soft: oklch(27% 0.040 275);
+
+  --ring: oklch(76% 0.095 195);
+
+  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.30);
+  --shadow-raised: 0 2px 4px oklch(0% 0 0 / 0.30),
+                   0 12px 28px -12px oklch(0% 0 0 / 0.55);
+  --shadow-float: 0 4px 8px oklch(0% 0 0 / 0.35),
+                  0 24px 56px -20px oklch(0% 0 0 / 0.65);
+  --inner-highlight: inset 0 1px 0 oklch(100% 0 0 / 0.06);
+
+  color-scheme: dark;
+}
+
+/* A learner who explicitly chooses to follow their system gets the dark set
+   only when the OS asks for it. The absence of any attribute means light. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --surface: oklch(17.5% 0.010 265);
-    --surface-raised: oklch(22% 0.012 265);
-    --surface-sunken: oklch(14.5% 0.010 265);
-    --surface-hover: oklch(25% 0.014 265);
-
-    --text-primary: oklch(96% 0.004 265);
-    --text-secondary: oklch(78% 0.010 265);
-    --text-muted: oklch(65% 0.012 265);
-
-    --border: oklch(29% 0.014 265);
-    --border-strong: oklch(37% 0.016 265);
-
-    --accent: oklch(74% 0.095 195);
-    --accent-hover: oklch(80% 0.095 195);
-    --accent-soft: oklch(28% 0.035 195);
-    --accent-subtle: oklch(24% 0.020 195);
-
+  [data-theme="system"] {
+    --surface: oklch(21% 0.022 245);
+    --surface-raised: oklch(25.5% 0.024 245);
+    --surface-sunken: oklch(18% 0.020 245);
+    --surface-hover: oklch(28.5% 0.026 245);
+  --track: oklch(34% 0.022 240);
+    --text-primary: oklch(96% 0.008 195);
+    --text-secondary: oklch(79% 0.016 210);
+    --text-muted: oklch(66% 0.018 220);
+    --border: oklch(32% 0.024 235);
+    --border-strong: oklch(40% 0.028 235);
+    --tint-mint: oklch(25% 0.030 200);
+    --tint-mist: oklch(23% 0.020 200);
+    --tint-cream: oklch(24% 0.014 80);
+    --tint-warm: oklch(26% 0.020 60);
+    --tint-deep: oklch(15% 0.024 245);
+    --tint-deep-raised: oklch(19% 0.026 245);
+    --tint-deep-line: oklch(28% 0.026 235);
+    --tint-deep-text: oklch(96% 0.008 195);
+    --tint-deep-text-soft: oklch(78% 0.018 205);
+    --accent: oklch(76% 0.095 195);
+    --accent-hover: oklch(82% 0.095 195);
+    --accent-soft: oklch(29% 0.040 195);
+    --accent-subtle: oklch(25% 0.024 195);
+    --coral: oklch(76% 0.115 45);
+    --coral-soft: oklch(28% 0.045 45);
     --success: oklch(74% 0.095 155);
     --success-soft: oklch(27% 0.035 155);
-    --warning: oklch(79% 0.11 75);
+    --warning: oklch(79% 0.110 75);
     --warning-soft: oklch(29% 0.040 75);
-    --danger: oklch(70% 0.14 27);
+    --danger: oklch(70% 0.140 27);
     --danger-soft: oklch(29% 0.050 27);
-    --info: oklch(74% 0.10 275);
+    --info: oklch(74% 0.100 275);
     --info-soft: oklch(27% 0.040 275);
-
-    --ring: oklch(74% 0.095 195);
-
-    --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.35);
-    --shadow-raised: 0 8px 24px -8px oklch(0% 0 0 / 0.55);
-
+    --ring: oklch(76% 0.095 195);
+    --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.30);
+    --shadow-raised: 0 2px 4px oklch(0% 0 0 / 0.30),
+    0 12px 28px -12px oklch(0% 0 0 / 0.55);
+    --shadow-float: 0 4px 8px oklch(0% 0 0 / 0.35),
+    0 24px 56px -20px oklch(0% 0 0 / 0.65);
+    --inner-highlight: inset 0 1px 0 oklch(100% 0 0 / 0.06);
     color-scheme: dark;
   }
 }
@@ -151,6 +287,7 @@
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
   --color-surface-hover: var(--surface-hover);
+  --color-track: var(--track);
 
   --color-primary: var(--text-primary);
   --color-secondary: var(--text-secondary);
@@ -176,10 +313,28 @@
 
   --color-ring: var(--ring);
 
+  --color-tint-mint: var(--tint-mint);
+  --color-tint-mist: var(--tint-mist);
+  --color-tint-cream: var(--tint-cream);
+  --color-tint-warm: var(--tint-warm);
+  --color-tint-deep: var(--tint-deep);
+  --color-tint-deep-raised: var(--tint-deep-raised);
+  --color-tint-deep-line: var(--tint-deep-line);
+  --color-tint-deep-text: var(--tint-deep-text);
+  --color-tint-deep-text-soft: var(--tint-deep-text-soft);
+
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+
+  --shadow-float: var(--shadow-float);
+  --shadow-raised-soft: var(--shadow-raised);
+  --shadow-inner-highlight: var(--inner-highlight);
+
   --radius-sm: var(--radius-sm);
   --radius-DEFAULT: var(--radius);
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
+  --radius-section: var(--radius-section);
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;

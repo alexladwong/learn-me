@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
 import { signOutAction } from "@/app/(auth)/actions";
 
 /**
@@ -26,7 +25,6 @@ import { signOutAction } from "@/app/(auth)/actions";
  * navigation only happens *after* the action reports success.
  */
 export function useSignOut() {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,14 +68,22 @@ export function useSignOut() {
         onSignedOut?.();
 
         /*
-         * `replace`, not `push`: a signed-out learner pressing Back must not land
-         * on the dashboard they just left. `refresh` drops the router's cached
-         * RSC payloads for the authenticated routes, so Back cannot paint one
-         * from memory either — the server-side guard is the real protection, but
-         * this stops the flash of stale content before it redirects.
+         * A full document navigation, and this is the one place it is right.
+         *
+         * `router.replace("/")` was tried first and did not settle reliably after
+         * the session cookies were cleared — the URL stayed on the authenticated
+         * route. `router.refresh()` alongside it made that worse by cancelling the
+         * in-flight navigation.
+         *
+         * More importantly, a client-side transition keeps the whole authenticated
+         * React tree, its cached RSC payloads and every piece of in-memory state
+         * alive. Signing out is precisely the moment all of that must be
+         * discarded, and a document load is the only thing that guarantees it.
+         *
+         * `replace` rather than `href`, so the authenticated page is not left in
+         * the history for Back to find.
          */
-        router.replace("/");
-        router.refresh();
+        window.location.replace("/");
       } catch {
         // The action never returned: network, a dropped WebView, a 500.
         setError("Could not sign out. Please try again.");
@@ -86,7 +92,7 @@ export function useSignOut() {
         setPending(false);
       }
     },
-    [clearClientState, router],
+    [clearClientState],
   );
 
   return { signOut, pending, error };

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useSyncExternalStore } from "react";
 import { Icon } from "@/components/ui/icon";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useSignOut } from "@/lib/auth/sign-out-client";
@@ -50,6 +51,8 @@ export function AccountMenu({
   const { signOut, pending, error } = useSignOut();
 
   const rootRef = useRef<HTMLDivElement | null>(null);
+  /** The portalled panel, which is NOT inside `rootRef` — see the handler below. */
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const itemRefs = useRef<Array<HTMLElement | null>>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -58,6 +61,14 @@ export function AccountMenu({
   const triggerId = useId();
 
   const open = openedAtPath === pathname;
+  /*
+   * Which presentation to render.
+   *
+   * Resolved on the client only — the panel does not exist during SSR, because
+   * `open` cannot be true until a learner interacts, so there is no server/client
+   * disagreement to worry about.
+   */
+  const isDesktop = useIsDesktop();
 
   const links = [
     { href: `/${lang}/progress`, label: "Profile", icon: "profile" as const },
@@ -84,7 +95,23 @@ export function AccountMenu({
   useEffect(() => {
     if (!open) return;
     function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpenedAtPath(null);
+      /*
+       * Both the trigger wrapper AND the portalled panel count as "inside".
+       *
+       * The panel is rendered into `document.body` so that the header's
+       * `backdrop-filter` cannot trap it, which means it is not a DOM descendant
+       * of `rootRef`. Checking only `rootRef` therefore treated a tap on any item
+       * — including Sign out — as an outside click, closing the sheet on
+       * `pointerdown` before the `click` could land. The button never fired and
+       * the learner simply could not sign out.
+       *
+       * This was invisible to the test suite because a synthetic `.click()` sends
+       * no `pointerdown` at all.
+       */
+      const target = event.target as Node;
+      const inside =
+        rootRef.current?.contains(target) || panelRef.current?.contains(target);
+      if (!inside) setOpenedAtPath(null);
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -127,89 +154,120 @@ export function AccountMenu({
   const itemClass =
     "press flex min-h-[48px] w-full items-center gap-3 px-4 text-left text-[0.9375rem] text-primary hover:bg-surface-hover lg:min-h-0 lg:px-3 lg:py-2.5 lg:text-sm";
 
-  const panel = (
+  /*
+   * The items, shared by both presentations.
+   *
+   * Only one of the two wrappers below is ever mounted, so `menuId` and the menu
+   * roles are never duplicated in the document.
+   */
+  const content = (
     <>
-      {/* Backdrop, mobile only. `lg:hidden` keeps the desktop popover unobscured. */}
+      <div className="px-4 pb-3 lg:px-3 lg:pb-2 lg:pt-2.5">
+        <p className="truncate text-base font-semibold text-primary lg:text-sm lg:font-medium">
+          {name}
+        </p>
+        <p className="truncate text-sm text-muted lg:text-xs">{email}</p>
+      </div>
+
+      <div className="border-t border-line" role="separator" />
+
+      {links.map((link, index) => (
+        <Link
+          key={link.href}
+          ref={(element) => {
+            itemRefs.current[index] = element;
+          }}
+          href={link.href}
+          role="menuitem"
+          tabIndex={-1}
+          onClick={() => close(false)}
+          className={itemClass}
+        >
+          <Icon name={link.icon} size={18} />
+          {link.label}
+        </Link>
+      ))}
+
+      {/* Appearance lives in the header on desktop, so it is mobile-only here. */}
+      <div className="press flex min-h-[48px] items-center gap-3 px-4 lg:hidden">
+        <Icon name="sun" size={18} />
+        <span className="flex-1 text-[0.9375rem] text-primary">Appearance</span>
+        <ThemeToggle />
+      </div>
+
+      <div className="border-t border-line" role="separator" />
+
+      {error ? (
+        <p role="alert" className="px-4 py-2 text-xs font-medium text-danger lg:px-3">
+          {error}
+        </p>
+      ) : null}
+
+      <button
+        ref={(element) => {
+          itemRefs.current[links.length] = element;
+        }}
+        type="button"
+        role="menuitem"
+        tabIndex={-1}
+        aria-busy={pending}
+        onClick={() => void signOut(() => close(false))}
+        className={`${itemClass} font-medium`}
+      >
+        <Icon name="logout" size={18} />
+        {pending ? "Signing out…" : "Sign out"}
+      </button>
+    </>
+  );
+
+  /*
+   * Desktop: a popover anchored to the trigger.
+   *
+   * This one is rendered **inline**, inside `rootRef`, which is `relative`. That
+   * is what makes `absolute right-0 top-[calc(100%+0.5rem)]` mean "flush with the
+   * avatar's right edge, just under it". Portalling it here would strip the
+   * positioned ancestor and resolve those offsets against the initial containing
+   * block — a viewport height down and the document's right edge, which is the
+   * bottom-right corner of the window.
+   */
+  const desktopPanel = (
+    <div
+      ref={panelRef}
+      id={menuId}
+      role="menu"
+      aria-labelledby={triggerId}
+      className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 overflow-hidden rounded-[var(--radius-xl)] border border-line bg-surface-raised py-1 shadow-[var(--shadow-float)] xl:w-80"
+    >
+      {content}
+    </div>
+  );
+
+  /*
+   * Mobile: still a bottom sheet through a portal.
+   *
+   * It needs the portal because the header carries `backdrop-filter`, and a
+   * backdrop-filter makes an element the containing block for `position: fixed`
+   * descendants — without escaping, a "fixed" sheet would be trapped inside the
+   * 48px header bar.
+   */
+  const mobilePanel = (
+    <>
       <div
         aria-hidden="true"
         onClick={() => close(false)}
-        className="fixed inset-0 z-40 bg-[oklch(24%_0.028_225/0.35)] lg:hidden"
+        className="fixed inset-0 z-40 bg-[oklch(24%_0.028_225/0.35)]"
       />
-
       <div
+        ref={panelRef}
         id={menuId}
         role="menu"
         aria-labelledby={triggerId}
-        className={[
-          // Mobile: bottom sheet.
-          "sheet-up fixed inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden",
-          "rounded-t-[1.5rem] border-t border-line bg-surface-raised",
-          "pb-[max(0.5rem,env(safe-area-inset-bottom))]",
-          // Desktop: compact popover, restoring the positional reset the sheet undoes.
-          "lg:absolute lg:inset-x-auto lg:bottom-auto lg:right-0 lg:top-[calc(100%+0.5rem)] lg:z-50 lg:w-64",
-          "lg:rounded-[var(--radius-xl)] lg:border lg:shadow-[var(--shadow-float)] lg:pb-1",
-        ].join(" ")}
+        className="sheet-up fixed inset-x-0 bottom-0 z-50 flex flex-col overflow-hidden rounded-t-[1.5rem] border-t border-line bg-surface-raised pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       >
-        {/* Grab handle — the visual cue that this panel came from the bottom. */}
-        <div aria-hidden="true" className="flex justify-center py-2.5 lg:hidden">
+        <div aria-hidden="true" className="flex justify-center py-2.5">
           <span className="h-1 w-10 rounded-full bg-line-strong" />
         </div>
-
-        <div className="px-4 pb-3 lg:px-3 lg:pb-2 lg:pt-2.5">
-          <p className="truncate text-base font-semibold text-primary lg:text-sm lg:font-medium">
-            {name}
-          </p>
-          <p className="truncate text-sm text-muted lg:text-xs">{email}</p>
-        </div>
-
-        <div className="border-t border-line" role="separator" />
-
-        {links.map((link, index) => (
-          <Link
-            key={link.href}
-            ref={(element) => {
-              itemRefs.current[index] = element;
-            }}
-            href={link.href}
-            role="menuitem"
-            tabIndex={-1}
-            onClick={() => close(false)}
-            className={itemClass}
-          >
-            <Icon name={link.icon} size={18} />
-            {link.label}
-          </Link>
-        ))}
-
-        {/* Appearance moved out of the mobile header and in here. */}
-        <div className="press flex min-h-[48px] items-center gap-3 px-4 lg:hidden">
-          <Icon name="sun" size={18} />
-          <span className="flex-1 text-[0.9375rem] text-primary">Appearance</span>
-          <ThemeToggle />
-        </div>
-
-        <div className="border-t border-line" role="separator" />
-
-        {error ? (
-          <p role="alert" className="px-4 py-2 text-xs font-medium text-danger lg:px-3">
-            {error}
-          </p>
-        ) : null}
-
-        <button
-          ref={(element) => {
-            itemRefs.current[links.length] = element;
-          }}
-          type="button"
-          role="menuitem"
-          tabIndex={-1}
-          aria-busy={pending}
-          onClick={() => void signOut(() => close(false))}
-          className={`${itemClass} font-medium`}
-        >
-          <Icon name="logout" size={18} />
-          {pending ? "Signing out…" : "Sign out"}
-        </button>
+        {content}
       </div>
     </>
   );
@@ -239,9 +297,34 @@ export function AccountMenu({
 
       {/* Portalled out of the header, whose backdrop-filter would otherwise trap
           a fixed-position panel. */}
-      {open && typeof document !== "undefined"
-        ? createPortal(panel, document.body)
+      {open
+        ? isDesktop
+          ? desktopPanel
+          : typeof document !== "undefined"
+            ? createPortal(mobilePanel, document.body)
+            : null
         : null}
     </div>
+  );
+}
+
+/**
+ * `matchMedia` as an external store.
+ *
+ * `useSyncExternalStore` rather than `useState` + `useEffect` for the same reason
+ * the rail uses it: no setState during an effect, a defined server snapshot, and
+ * no cascading render. The server snapshot is `false`, which is safe because the
+ * account panel is only ever mounted after a client interaction.
+ */
+function useIsDesktop(): boolean {
+  const query = "(min-width: 1024px)";
+  return useSyncExternalStore(
+    (onChange) => {
+      const list = window.matchMedia(query);
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
   );
 }

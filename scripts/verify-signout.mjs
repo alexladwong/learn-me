@@ -140,6 +140,43 @@ try {
    * element itself removes coordinate/hit-testing from the equation, so a failure
    * here means the form action is broken rather than the click landing elsewhere.
    */
+  /*
+   * Desktop geometry: the popover must hang off the avatar, not the window.
+   *
+   * The bug this catches was a portal stripping the positioned ancestor, so the
+   * panel resolved `right-0 top-[calc(100%+0.5rem)]` against the initial
+   * containing block and landed at the bottom-right of the viewport.
+   */
+  for (const width of [1024, 1280, 1440, 1920]) {
+    await send("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: false }, sessionId);
+    await sleep(350);
+    if ((await evaluate("return document.querySelectorAll('[role=menu]').length")) === 0) {
+      await clickAt(trigger);
+      await sleep(350);
+    }
+    const geo = await evaluate(`
+      const menu = document.querySelector('[role=menu]');
+      const trigger = document.querySelector('[aria-haspopup="menu"][aria-label^="Account"]');
+      if (!menu || !trigger) return null;
+      const m = menu.getBoundingClientRect(), t = trigger.getBoundingClientRect();
+      return {
+        gap: Math.round(m.top - t.bottom),
+        rightDelta: Math.round(m.right - t.right),
+        inViewport: m.left >= 0 && m.right <= window.innerWidth && m.top >= 0,
+        width: Math.round(m.width),
+      };
+    `);
+    const ok = geo && geo.gap >= 4 && geo.gap <= 16 && Math.abs(geo.rightDelta) <= 2 && geo.inViewport;
+    check(`at ${width}px the popover hangs off the avatar`, Boolean(ok),
+      geo ? `gap=${geo.gap}px rightΔ=${geo.rightDelta}px width=${geo.width}px inViewport=${geo.inViewport}` : "not found");
+    if (width === 1440) {
+      const shot = await send("Page.captureScreenshot", { format: "png" }, sessionId);
+      writeFileSync(path.join(SHOTS, "account-popover-1440.png"), Buffer.from(shot.data, "base64"));
+    }
+  }
+  await send("Emulation.setDeviceMetricsOverride", { width: 756, height: 469, deviceScaleFactor: 1, mobile: false }, sessionId);
+  await sleep(300);
+
   // A mobile capture too: at 390px the panel should be a bottom sheet.
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, sessionId);
   await sleep(400);
@@ -159,27 +196,38 @@ try {
   await send("Emulation.clearDeviceMetricsOverride", {}, sessionId);
   await sleep(300);
 
-  const found = await evaluate(`
+  /*
+   * A REAL pointer press and release, not `.click()`.
+   *
+   * The synthetic version sends no `pointerdown`, so it could not catch the bug
+   * that actually broke sign-out in the field: a document-level pointerdown
+   * handler treating the portalled panel as outside and unmounting it before the
+   * click landed. Real events are the only way to test a real event handler.
+   */
+  const signOutBox = await evaluate(`
     const items = [...document.querySelectorAll('[role=menuitem]')];
     const btn = items[items.length - 1];
-    if (!btn) return "no button";
-    btn.click();
-    /*
-     * Read the disabled property in the SAME task as the click. React flushes
-     * events synchronously, so a self-disabling submitter is visible here — and
-     * that is precisely the state WebKit refuses to submit from. An earlier
-     * version disabled the button from its own onClick, which worked in Chrome
-     * and hung on iOS.
-     */
-    return btn.disabled ? "disabled-after-click" : "clicked";
+    if (!btn) return null;
+    const r = btn.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, label: btn.innerText.trim() };
   `);
+  check("the Sign out control is on screen", Boolean(signOutBox), signOutBox?.label ?? "not found");
+
+  if (signOutBox) {
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: signOutBox.x, y: signOutBox.y, button: "left", clickCount: 1 }, sessionId);
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: signOutBox.x, y: signOutBox.y, button: "left", clickCount: 1 }, sessionId);
+  }
+
+  // The panel must survive its own click. If a pointerdown handler closes it
+  // first, this is where it shows.
+  await sleep(300);
+  const stillOpen = await evaluate("return document.querySelectorAll('[role=menu]').length");
   check(
-    "the Sign out control stays enabled through its own click",
-    found === "clicked",
-    found === "disabled-after-click"
-      ? "it disables itself, which cancels the submission on WebKit"
-      : found,
+    "the panel survives a pointer press on Sign out",
+    stillOpen === 1 || (await url_()) !== "/fr",
+    stillOpen === 0 ? "the panel closed on pointerdown before the click landed" : "still open",
   );
+
   await sleep(5000);
 
   const after = await cookies();

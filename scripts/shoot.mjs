@@ -290,6 +290,15 @@ try {
       }
       // `SHOT_NAV=expanded` seeds the rail preference before first paint, so the
       // capture shows the real layout rather than a post-hydration toggle.
+      // SHOT_THEME=dark seeds the stored appearance before first paint, so the
+      // capture shows a settled dark theme rather than a post-hydration swap.
+      if (process.env.SHOT_THEME) {
+        await send(
+          "Page.addScriptToEvaluateOnNewDocument",
+          { source: `try{localStorage.setItem("learn-me:theme",${JSON.stringify(process.env.SHOT_THEME)})}catch(e){}` },
+          sessionId,
+        );
+      }
       if (process.env.SHOT_NAV) {
         await send(
           "Page.addScriptToEvaluateOnNewDocument",
